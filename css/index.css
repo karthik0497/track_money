@@ -1,0 +1,278 @@
+/* Track-Money Design System & Global Styles */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* Ultra-Premium Color Palette */
+  --bg-app: #080b12;
+  --bg-surface: #0f172a;
+  --bg-surface-elevated: #1e293b;
+  --bg-glass: rgba(15, 23, 42, 0.78);
+  --bg-glass-card: rgba(30, 41, 59, 0.65);
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-highlight: rgba(99, 102, 241, 0.35);
+
+  /* Financial Accent Colors */
+  --color-primary: #6366f1;
+  --color-primary-glow: rgba(99, 102, 241, 0.35);
+  --color-primary-hover: #4f46e5;
+  --color-success: #10b981;
+  --color-success-bg: rgba(16, 185, 129, 0.12);
+  --color-danger: #f43f5e;
+  --color-danger-bg: rgba(244, 63, 94, 0.12);
+  --color-warning: #f59e0b;
+  --color-warning-bg: rgba(245, 158, 11, 0.12);
+  --color-info: #06b6d4;
+  --color-ai: #8b5cf6;
+
+  /* Typography */
+  --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* Text Colors */
+  --text-main: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+
+  /* Shadows & Radius */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-full: 9999px;
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 0 25px var(--color-primary-glow);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  overflow: hidden;
+}
+
+/* App Shell Layout */
+#app-root {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  position: relative;
+  background-color: var(--bg-app);
+  box-shadow: 0 0 60px rgba(0, 0, 0, 0.6);
+}
+
+/* Top App Header */
+.app-header {
+  height: 64px;
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.25rem;
+  background: var(--bg-glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border-color);
+  z-index: 40;
+}
+
+.brand-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-icon-wrapper {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, #4f46e5, #10b981);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+.brand-icon-wrapper img {
+  width: 22px;
+  height: 22px;
+}
+
+.brand-title {
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  background: linear-gradient(90deg, #ffffff, #c7d2fe);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Main Scrollable View Area */
+.app-main {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 1rem 1.25rem 6.5rem 1.25rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Custom Scrollbar */
+.app-main::-webkit-scrollbar {
+  width: 6px;
+}
+.app-main::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-full);
+}
+
+/* Bottom Navigation Bar */
+.bottom-nav {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 0.5rem;
+  z-index: 50;
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+  flex: 1;
+}
+
+.nav-item .nav-icon {
+  font-size: 1.25rem;
+  margin-bottom: 2px;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.nav-item .nav-label {
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+}
+
+.nav-item.active {
+  color: var(--color-primary);
+}
+
+.nav-item.active .nav-icon {
+  transform: translateY(-2px) scale(1.15);
+}
+
+.nav-item:active {
+  transform: scale(0.94);
+}
+
+/* Animations */
+.fade-in {
+  animation: fadeIn 0.25s ease-out forwards;
+}
+
+.slide-up {
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0.5; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Utility Helpers */
+.text-success { color: var(--color-success) !important; }
+.text-danger { color: var(--color-danger) !important; }
+.text-warning { color: var(--color-warning) !important; }
+.text-info { color: var(--color-info) !important; }
+.text-primary { color: var(--color-primary) !important; }
+.text-muted { color: var(--text-muted); }
+.text-xs { font-size: 0.75rem; }
+.text-sm { font-size: 0.85rem; }
+.text-lg { font-size: 1.15rem; }
+.text-xl { font-size: 1.35rem; }
+.text-2xl { font-size: 1.65rem; }
+.text-3xl { font-size: 2.1rem; }
+.font-bold { font-weight: 700; }
+.text-right { text-align: right; }
+.text-center { text-align: center; }
+.flex-align-center { display: flex; align-items: center; }
+.flex-1 { flex: 1; }
+
+/* Grid Helpers */
+.grid-2-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 480px) {
+  .app-header {
+    padding: 0 1rem;
+    height: 58px;
+    min-height: 58px;
+  }
+  .app-main {
+    padding: 0.85rem 1rem 5.5rem 1rem;
+  }
+  .bottom-nav {
+    height: 64px;
+    padding: 0 0.25rem max(4px, env(safe-area-inset-bottom)) 0.25rem;
+  }
+  .nav-item {
+    padding: 4px 6px;
+  }
+  .nav-item .nav-icon {
+    font-size: 1.2rem;
+  }
+  .nav-item .nav-label {
+    font-size: 0.65rem;
+  }
+  .grid-2-col {
+    gap: 8px;
+  }
+}
+

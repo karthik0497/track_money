@@ -1,0 +1,411 @@
+/* Track-Money: Accounts, Categories & Recurring Styles */
+
+/* Accounts Grid */
+.accounts-summary-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 1.25rem;
+}
+
+@media (max-width: 600px) {
+  .accounts-summary-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.summary-chip {
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-color);
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+}
+
+.chip-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.chip-val {
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.accounts-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.account-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border-radius: var(--radius-md);
+  position: relative;
+  overflow: hidden;
+  padding: 1.25rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.account-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.account-card.debit-card {
+  border-left: 4px solid var(--color-success);
+}
+
+.account-card.credit-card {
+  border-left: 4px solid var(--color-danger);
+}
+
+.card-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.acc-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.acc-icon-box {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+}
+
+.acc-name {
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.acc-balance-block {
+  margin-bottom: 1rem;
+}
+
+.balance-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.balance-number {
+  font-family: var(--font-heading);
+  font-size: 1.7rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.credit-card-balances {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 0.5rem;
+}
+
+.acc-footer-stats {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-color);
+  margin-bottom: 0.75rem;
+}
+
+.acc-stat-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.card-quick-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 0.5rem;
+}
+
+/* Account Detail Modal Banner */
+.detail-banner {
+  padding: 1.5rem;
+  border-radius: var(--radius-md);
+  margin-bottom: 1.25rem;
+}
+
+.banner-debit {
+  background: linear-gradient(135deg, rgba(6, 78, 59, 0.4) 0%, rgba(15, 23, 42, 0.95) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.banner-credit {
+  background: linear-gradient(135deg, rgba(153, 27, 27, 0.4) 0%, rgba(15, 23, 42, 0.95) 100%);
+  border: 1px solid rgba(244, 63, 94, 0.3);
+}
+
+.detail-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.detail-meta-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.detail-actions-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+/* Search Box & Filters */
+.search-box-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.search-input-wrapper {
+  position: relative;
+  flex: 1;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.search-input {
+  padding-left: 36px !important;
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.filtered-totals-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 1rem 0 0.75rem 0;
+}
+
+.filtered-chips {
+  display: flex;
+  gap: 8px;
+}
+
+/* Category Tree Grid */
+.categories-tree-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.category-tree-card {
+  padding: 1.25rem;
+}
+
+.cat-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.85rem;
+}
+
+.cat-title-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cat-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+}
+
+.subcat-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.subcat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-color);
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.remove-subcat-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.remove-subcat-btn:hover {
+  color: var(--color-danger);
+}
+
+/* Recurring list */
+.recurring-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.recurring-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-sm);
+  gap: 12px;
+}
+
+.rec-icon-box {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.rec-icon-box.income {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.rec-icon-box.expense {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+.rec-details {
+  flex: 1;
+}
+
+.rec-amount-col {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.rec-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+/* Reports Tables */
+.report-table-wrapper {
+  overflow-x: auto;
+}
+
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.report-table th, .report-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.report-table th {
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 0.4px;
+}
+
+.report-row-highlight {
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.report-row-total {
+  background: rgba(99, 102, 241, 0.1);
+  font-size: 0.95rem;
+}
+
+/* Audit Log List */
+.audit-log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.audit-item {
+  padding: 12px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-sm);
+}
+
+.audit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.audit-interpreted pre {
+  background: #090d16;
+  padding: 8px;
+  border-radius: 4px;
+  overflow-x: auto;
+  color: #a5b4fc;
+  font-family: monospace;
+  margin: 6px 0;
+}

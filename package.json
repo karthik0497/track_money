@@ -1,0 +1,27 @@
+{
+  "name": "track-money",
+  "version": "1.0.0",
+  "description": "AI-Powered Personal Finance App for Android with Embedded Local DB",
+  "main": "index.html",
+  "scripts": {
+    "dev": "node server.js",
+    "build:apk": "bash build-apk.sh"
+  },
+  "keywords": [
+    "finance",
+    "expense-tracker",
+    "ai-assistant",
+    "android",
+    "offline-first",
+    "sqlite",
+    "indexeddb"
+  ],
+  "author": "Antigravity",
+  "license": "MIT",
+  "type": "module",
+  "devDependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/cli": "^7.6.9",
+    "@capacitor/core": "^8.5.2"
+  }
+}

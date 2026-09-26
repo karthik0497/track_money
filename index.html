@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Track-Money — AI-Powered Personal Finance</title>
+  
+  <!-- SEO Meta -->
+  <meta name="description" content="AI-Powered Personal Finance & Expense Manager with Local Offline Database, Debit & Credit Portfolios, and Voice Conversational Assistant.">
+  <meta name="theme-color" content="#090d16">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Track-Money">
+
+  <!-- Manifest & Icons -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/index.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/assistant.css">
+  <link rel="stylesheet" href="css/accounts.css">
+</head>
+<body>
+  <div id="app-root">
+    <!-- Top Application Bar -->
+    <header class="app-header">
+      <div class="brand-wrapper">
+        <div class="brand-icon-wrapper">
+          <img src="icons/icon.svg" alt="Track-Money Logo">
+        </div>
+        <h1 class="brand-title">Track-Money</h1>
+      </div>
+      <div class="header-right">
+        <span id="header-net-pill" class="pill pill-success text-xs">Net: ₹ 0</span>
+        <button class="btn btn-icon" id="header-camera-btn" title="Scan Receipt with Camera">
+          📷
+        </button>
+        <button class="btn btn-icon" id="header-voice-btn" title="Voice AI Assistant">
+          ✨
+        </button>
+      </div>
+    </header>
+
+    <!-- Main View Container -->
+    <main class="app-main" id="app-main-view" role="main">
+      <!-- Dynamically injected views -->
+    </main>
+
+    <!-- Bottom Navigation Bar: Clean, Spacious & Non-Congested -->
+    <nav class="bottom-nav" role="navigation" aria-label="Main Navigation">
+      <button class="nav-item active" data-view="dashboard" id="nav-dashboard">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">Dashboard</span>
+      </button>
+      <button class="nav-item" data-view="accounts" id="nav-accounts">
+        <span class="nav-icon">🏦</span>
+        <span class="nav-label">Accounts</span>
+      </button>
+      <button class="nav-item" data-view="transactions" id="nav-transactions">
+        <span class="nav-icon">📜</span>
+        <span class="nav-label">History</span>
+      </button>
+      <button class="nav-item" data-view="reports" id="nav-reports">
+        <span class="nav-icon">📈</span>
+        <span class="nav-label">Reports</span>
+      </button>
+      <button class="nav-item" data-view="more" id="nav-more-toggle" aria-haspopup="true">
+        <span class="nav-icon">☰</span>
+        <span class="nav-label">More</span>
+      </button>
+    </nav>
+
+    <!-- Slide-Up Quick Navigation & Actions Sheet -->
+    <div class="more-sheet-backdrop" id="more-sheet-backdrop">
+      <div class="more-sheet-card slide-up" id="more-sheet-card">
+        <div class="more-sheet-header">
+          <div class="flex-align-center" style="gap: 8px;">
+            <span class="text-lg">✨</span>
+            <h4 class="font-bold">More Features & Actions</h4>
+          </div>
+          <button class="btn btn-icon btn-sm" id="close-more-sheet">✕</button>
+        </div>
+
+        <div class="more-grid">
+          <button class="more-menu-item" data-view="categories" id="nav-categories">
+            <div class="more-icon-box" style="background: rgba(99, 102, 241, 0.15); color: #818cf8;">🏷️</div>
+            <div class="more-text-col">
+              <span class="more-title">Categories</span>
+              <span class="more-desc">Budgets & custom tags</span>
+            </div>
+            <span class="more-arrow">➔</span>
+          </button>
+
+          <button class="more-menu-item" data-view="recurring" id="nav-recurring">
+            <div class="more-icon-box" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">🔄</div>
+            <div class="more-text-col">
+              <span class="more-title">Recurring</span>
+              <span class="more-desc">Bills, subscriptions, SIPs</span>
+            </div>
+            <span class="more-arrow">➔</span>
+          </button>
+
+          <button class="more-menu-item" data-view="settings" id="nav-settings">
+            <div class="more-icon-box" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24;">⚙️</div>
+            <div class="more-text-col">
+              <span class="more-title">Settings & PIN</span>
+              <span class="more-desc">Permissions, lock, backups</span>
+            </div>
+            <span class="more-arrow">➔</span>
+          </button>
+
+          <button class="more-menu-item" id="nav-camera-scan">
+            <div class="more-icon-box" style="background: rgba(236, 72, 153, 0.15); color: #f472b6;">📷</div>
+            <div class="more-text-col">
+              <span class="more-title">Scan Receipt</span>
+              <span class="more-desc">Camera & paper bill scanner</span>
+            </div>
+            <span class="more-arrow">➔</span>
+          </button>
+
+          <button class="more-menu-item" id="nav-voice-assistant">
+            <div class="more-icon-box" style="background: rgba(139, 92, 246, 0.15); color: #a78bfa;">🎙️</div>
+            <div class="more-text-col">
+              <span class="more-title">AI Voice Assistant</span>
+              <span class="more-desc">Speak or type transactions</span>
+            </div>
+            <span class="more-arrow">➔</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Floating AI Assistant & Drawer Container -->
+    <div id="ai-assistant-container"></div>
+
+    <!-- Global Modal Root -->
+    <div id="global-modal-root"></div>
+  </div>
+
+  <!-- Main ES Module Entry Point -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

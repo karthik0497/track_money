@@ -1,0 +1,367 @@
+/* Track-Money: Dashboard Styles */
+
+/* Hero Net Position Banner */
+.hero-net-card {
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  margin-bottom: 1.25rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.hero-positive {
+  background: linear-gradient(135deg, rgba(30, 27, 75, 0.85) 0%, rgba(15, 23, 42, 0.95) 50%, rgba(6, 78, 59, 0.4) 100%);
+}
+
+.hero-negative {
+  background: linear-gradient(135deg, rgba(30, 27, 75, 0.85) 0%, rgba(15, 23, 42, 0.95) 50%, rgba(153, 27, 27, 0.4) 100%);
+}
+
+.hero-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.hero-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #a5b4fc;
+}
+
+.hero-badge {
+  font-size: 0.7rem;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  color: var(--text-muted);
+}
+
+.hero-amount {
+  font-family: var(--font-heading);
+  font-size: 2.35rem;
+  font-weight: 800;
+  letter-spacing: -1px;
+  color: #ffffff;
+  margin: 0.25rem 0;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+
+.hero-subtext {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 1.25rem;
+}
+
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 1rem;
+}
+
+.hero-stat-item {
+  background: rgba(15, 23, 42, 0.45);
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.hero-stat-item:hover {
+  background: rgba(15, 23, 42, 0.7);
+  transform: translateY(-2px);
+}
+
+.stat-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+}
+
+.stat-value {
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.stat-caption {
+  font-size: 0.65rem;
+  color: var(--text-dim);
+}
+
+/* Quick Actions Bar */
+.quick-actions-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 1.5rem;
+}
+
+.quick-actions-bar .btn {
+  flex: 1;
+  padding: 0.75rem 0.5rem;
+  font-size: 0.82rem;
+}
+
+/* Cashflow Stats Row */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 1.25rem;
+}
+
+@media (max-width: 640px) {
+  .stats-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.stat-card {
+  padding: 1rem;
+}
+
+.card-header-mini {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.stat-number {
+  font-family: var(--font-heading);
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.stat-trend {
+  font-size: 0.72rem;
+}
+
+/* Donut Chart Layout */
+.donut-chart-layout {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.5rem 0;
+}
+
+.donut-svg {
+  width: 140px;
+  height: 140px;
+  flex-shrink: 0;
+}
+
+.chart-legend {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  font-size: 0.78rem;
+  gap: 8px;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legend-label {
+  flex: 1;
+  color: var(--text-secondary);
+}
+
+.legend-val {
+  color: var(--text-main);
+}
+
+/* Mini Accounts Snapshot */
+.mini-accounts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mini-account-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: rgba(15, 23, 42, 0.4);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.acc-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  margin-right: 10px;
+}
+
+.acc-text {
+  flex: 1;
+}
+
+.acc-bal {
+  font-family: var(--font-heading);
+  font-size: 0.95rem;
+}
+
+/* Credit Limits & Upcoming Bills */
+.credit-limits-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.75rem;
+}
+
+.bills-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bill-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: rgba(245, 158, 11, 0.06);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: var(--radius-sm);
+}
+
+.bill-action {
+  text-align: right;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Recent Transactions */
+.transaction-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tx-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  transition: background 0.15s ease;
+}
+
+.tx-item:hover {
+  background: rgba(15, 23, 42, 0.75);
+}
+
+.tx-icon-col {
+  flex-shrink: 0;
+}
+
+.tx-icon-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+.tx-icon-circle.income {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.tx-icon-circle.expense {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+.tx-icon-circle.transfer {
+  background: rgba(99, 102, 241, 0.15);
+  color: var(--color-primary);
+}
+
+.tx-icon-circle.credit_card_payment {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+.tx-details-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.tx-title {
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tx-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tx-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tx-amount-col {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.tx-amount {
+  font-family: var(--font-heading);
+  font-size: 1rem;
+}
+
+.empty-placeholder {
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
