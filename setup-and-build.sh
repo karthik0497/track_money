@@ -60,14 +60,13 @@ mkdir -p www
 cp -rf index.html manifest.json sw.js icons css js www/
 echo "✓ Web assets synced"
 
-# ── 4. Capacitor sync ────────────────────────────────────────────────────────
+# ── 4. Sync web assets into Android project ──────────────────────────────────
 echo ""
-echo "Step 4: Syncing Capacitor Android project..."
-if [ ! -d "android" ]; then
-    npx cap add android
-fi
-npx cap sync android
-echo "✓ Capacitor synced"
+echo "Step 4: Syncing web assets into Android project..."
+ASSETS_DIR="$PROJECT_DIR/android/app/src/main/assets/public"
+mkdir -p "$ASSETS_DIR"
+cp -rf "$PROJECT_DIR/www/"* "$ASSETS_DIR/"
+echo "✓ Android assets synced directly"
 
 # ── 5. Write local.properties ────────────────────────────────────────────────
 echo "sdk.dir=$SDK_DIR" > "$PROJECT_DIR/android/local.properties"

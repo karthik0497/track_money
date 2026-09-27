@@ -126,7 +126,68 @@ html, body {
 .header-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+}
+
+/* Header Install & Profile Buttons */
+.btn-install-header {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(99, 102, 241, 0.2));
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  color: #34d399;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.btn-install-header:hover {
+  background: rgba(16, 185, 129, 0.3);
+  transform: translateY(-1px);
+}
+
+.header-profile-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  max-width: 140px;
+  overflow: hidden;
+}
+.header-profile-btn:hover {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: var(--color-primary);
+}
+
+.profile-avatar-mini {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #10b981);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  flex-shrink: 0;
+}
+
+.profile-name-mini {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
 }
 
 /* Main Scrollable View Area */
@@ -251,28 +312,75 @@ html, body {
 
 @media (max-width: 480px) {
   .app-header {
-    padding: 0 1rem;
-    height: 58px;
-    min-height: 58px;
+    padding: 0 0.75rem;
+    height: 56px;
+    min-height: 56px;
+  }
+  .brand-title {
+    font-size: 1.05rem;
+  }
+  .brand-icon-wrapper {
+    width: 30px;
+    height: 30px;
+  }
+  .header-right {
+    gap: 6px;
+  }
+  .hide-on-mobile {
+    display: none !important;
+  }
+  .header-profile-btn {
+    padding: 3px 6px;
+    max-width: 90px;
+    font-size: 0.72rem;
+  }
+  #header-net-pill {
+    padding: 2px 6px;
+    font-size: 0.7rem;
+  }
+  .btn-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 0.95rem;
   }
   .app-main {
-    padding: 0.85rem 1rem 5.5rem 1rem;
+    padding: 0.75rem 0.85rem 5.5rem 0.85rem;
   }
   .bottom-nav {
-    height: 64px;
+    height: 60px;
     padding: 0 0.25rem max(4px, env(safe-area-inset-bottom)) 0.25rem;
   }
   .nav-item {
-    padding: 4px 6px;
+    padding: 3px 4px;
   }
   .nav-item .nav-icon {
-    font-size: 1.2rem;
+    font-size: 1.15rem;
   }
   .nav-item .nav-label {
-    font-size: 0.65rem;
+    font-size: 0.62rem;
   }
   .grid-2-col {
-    gap: 8px;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
+/* Wide screen / Desktop Web hybrid styling */
+@media (min-width: 768px) {
+  #app-root {
+    margin: 1.5vh auto;
+    height: 97vh;
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+  }
+  .app-header {
+    border-top-left-radius: var(--radius-lg);
+    border-top-right-radius: var(--radius-lg);
+  }
+  .bottom-nav {
+    border-bottom-left-radius: var(--radius-lg);
+    border-bottom-right-radius: var(--radius-lg);
   }
 }
 

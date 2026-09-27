@@ -63,10 +63,12 @@ export class AccountModel {
     }
   }
 
-  static formatCurrency(amount, currency = '₹') {
+  static formatCurrency(amount, currency = null) {
     const num = Number(amount) || 0;
-    // Format according to Indian number system (Lakh, Crore)
-    return currency + ' ' + num.toLocaleString('en-IN', {
+    const activeCurrency = currency || localStorage.getItem('tm_currency') || '₹';
+    // Format according to standard currency locale
+    const locale = activeCurrency === '₹' ? 'en-IN' : 'en-US';
+    return activeCurrency + ' ' + num.toLocaleString(locale, {
       maximumFractionDigits: 2,
       minimumFractionDigits: 0
     });

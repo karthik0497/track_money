@@ -24,11 +24,90 @@ export class SettingsView {
         <div class="page-header">
           <div>
             <h2>Settings & Security</h2>
-            <p class="text-sm text-muted">Configure security lock, device permissions, and inspect AI audit trail</p>
+            <p class="text-sm text-muted">Manage your local Login ID, offline app install, and AI voice preferences</p>
           </div>
         </div>
 
-        <!-- Hardware & Device Permissions -->
+        <!-- 1. User Identity & Login ID (100% Local-First) -->
+        <div class="card" style="margin-bottom: 1.5rem;">
+          <div class="card-header">
+            <h4>User Identity & Login ID</h4>
+            <span class="badge badge-success">100% Local Profile</span>
+          </div>
+          <p class="text-sm text-muted">Your Login ID personalizes your dashboard. All records are saved strictly in your device's browser memory (IndexedDB) with zero centralized servers or tracking.</p>
+
+          <form id="settings-profile-form" style="margin-top: 1rem;">
+            <div class="grid-2-col">
+              <div class="form-group">
+                <label>Login ID / Workspace Name</label>
+                <input type="text" id="settings-login-id" class="form-input font-bold" 
+                       value="${profile.loginId || profile.name || 'User'}" required placeholder="e.g. Karthik">
+              </div>
+              <div class="form-group">
+                <label>Currency Symbol</label>
+                <select id="settings-currency" class="form-input">
+                  <option value="₹" ${profile.currency === '₹' ? 'selected' : ''}>₹ INR (Indian Rupee)</option>
+                  <option value="$" ${profile.currency === '$' ? 'selected' : ''}>$ USD (US Dollar)</option>
+                  <option value="€" ${profile.currency === '€' ? 'selected' : ''}>€ EUR (Euro)</option>
+                  <option value="£" ${profile.currency === '£' ? 'selected' : ''}>£ GBP (British Pound)</option>
+                  <option value="AED" ${profile.currency === 'AED' ? 'selected' : ''}>AED (UAE Dirham)</option>
+                  <option value="SGD" ${profile.currency === 'SGD' ? 'selected' : ''}>SGD (Singapore Dollar)</option>
+                </select>
+              </div>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 0.5rem; flex-wrap: wrap;">
+              <button type="submit" class="btn btn-primary btn-sm">💾 Save Login ID & Currency</button>
+              <button type="button" class="btn btn-outline btn-sm" id="btn-switch-login-id">🔄 Switch / New Login ID</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- 2. Web & Hybrid App Installation (No APK Needed) -->
+        <div class="card" style="margin-bottom: 1.5rem;">
+          <div class="card-header">
+            <h4>Download & Install as App</h4>
+            <span class="badge badge-info" id="badge-pwa-status">Browser PWA</span>
+          </div>
+          <p class="text-sm text-muted">You do not need an APK file. You can install Track-Money directly from this browser onto your Android phone, iPhone/iPad, Windows, or Mac with 1 tap.</p>
+          <div style="margin-top: 1rem; display: flex; gap: 10px; flex-wrap: wrap;">
+            <button class="btn btn-primary btn-sm" id="btn-settings-install-app">
+              📲 Install App on this Device
+            </button>
+            <button class="btn btn-outline btn-sm" id="btn-settings-install-guide">
+              ℹ️ How to Install (iOS / Android / PC)
+            </button>
+          </div>
+        </div>
+
+        <!-- 3. Theta AI Voice Configuration -->
+        <div class="card" style="margin-bottom: 1.5rem;">
+          <div class="card-header">
+            <h4>Theta AI Voice Speed</h4>
+            <span class="badge badge-ai" id="badge-voice-speed">${localStorage.getItem('tm_voice_speed') || '1.20'}x Speed</span>
+          </div>
+          <p class="text-sm text-muted">Fine-tune the speech playback speed for Theta AI conversational responses.</p>
+          <div style="margin-top: 1rem; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <div class="radio-toggle-group">
+              <label class="radio-pill">
+                <input type="radio" name="voice_speed_opt" value="1.0" ${(localStorage.getItem('tm_voice_speed') === '1' || localStorage.getItem('tm_voice_speed') === '1.0') ? 'checked' : ''}>
+                <span>1.0x Normal</span>
+              </label>
+              <label class="radio-pill">
+                <input type="radio" name="voice_speed_opt" value="1.2" ${(!localStorage.getItem('tm_voice_speed') || localStorage.getItem('tm_voice_speed') === '1.2' || localStorage.getItem('tm_voice_speed') === '1.20') ? 'checked' : ''}>
+                <span>1.2x Crisp ⚡</span>
+              </label>
+              <label class="radio-pill">
+                <input type="radio" name="voice_speed_opt" value="1.35" ${localStorage.getItem('tm_voice_speed') === '1.35' ? 'checked' : ''}>
+                <span>1.35x Fast</span>
+              </label>
+            </div>
+            <button class="btn btn-outline btn-xs" id="btn-test-ai-voice">
+              🔊 Test Voice
+            </button>
+          </div>
+        </div>
+
+        <!-- 4. Hardware & Device Permissions -->
         <div class="card" style="margin-bottom: 1.5rem;">
           <div class="card-header">
             <h4>Hardware & Device Permissions</h4>
@@ -169,6 +248,55 @@ export class SettingsView {
   }
 
   attachEvents(container, profile) {
+    // 0. Profile & Login ID Form Logic
+    container.querySelector('#settings-profile-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const newLoginId = container.querySelector('#settings-login-id').value.trim();
+      const newCurrency = container.querySelector('#settings-currency').value;
+      if (!newLoginId) return;
+
+      await this.storage.saveProfile({
+        loginId: newLoginId,
+        name: newLoginId,
+        currency: newCurrency
+      });
+
+      this.app.updateHeaderProfileBadge(newLoginId);
+      this.app.showToast(`Login ID updated to "${newLoginId}" with currency ${newCurrency}`);
+      await this.app.refreshCurrentView();
+    });
+
+    container.querySelector('#btn-switch-login-id')?.addEventListener('click', () => {
+      this.app.openProfileModal();
+    });
+
+    // PWA Install Handlers
+    container.querySelector('#btn-settings-install-app')?.addEventListener('click', () => {
+      this.app.triggerInstallPrompt();
+    });
+
+    container.querySelector('#btn-settings-install-guide')?.addEventListener('click', () => {
+      this.app.showInstallGuideModal();
+    });
+
+    // Theta AI Voice Speed Handlers
+    container.querySelectorAll('input[name="voice_speed_opt"]').forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        const speed = parseFloat(e.target.value) || 1.2;
+        localStorage.setItem('tm_voice_speed', speed.toString());
+        const badge = container.querySelector('#badge-voice-speed');
+        if (badge) badge.textContent = `${speed}x Speed`;
+        this.app.showToast(`Theta AI Voice speed set to ${speed}x`);
+      });
+    });
+
+    container.querySelector('#btn-test-ai-voice')?.addEventListener('click', () => {
+      const speed = localStorage.getItem('tm_voice_speed') || '1.20';
+      if (this.app.assistantView && this.app.assistantView.speech) {
+        this.app.assistantView.speech.speak(`Hello! This is Theta AI speaking briskly at ${speed} times speed. Your financial records are 100 percent private and stored locally on your device.`);
+      }
+    });
+
     // 1. Hardware & Device Permissions Logic
     const micBadge = container.querySelector('#badge-mic-perm');
     const camBadge = container.querySelector('#badge-cam-perm');

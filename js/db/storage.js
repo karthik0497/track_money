@@ -107,15 +107,51 @@ class StorageEngine {
 
     const profile = await this.get(STORES.SETTINGS, 'profile');
     if (!profile) {
+      const defaultLoginId = localStorage.getItem('tm_login_id') || 'User';
       await this.put(STORES.SETTINGS, {
         key: 'profile',
-        name: 'User',
-        currency: '₹',
+        loginId: defaultLoginId,
+        name: defaultLoginId,
+        currency: localStorage.getItem('tm_currency') || '₹',
         pinEnabled: false,
         pinCode: null,
         createdDate: new Date().toISOString()
       });
     }
+  }
+
+  // Profile & User Identity Management (100% Local-First)
+  async getProfile() {
+    if (!this.db) await this.readyPromise;
+    const profile = await this.get(STORES.SETTINGS, 'profile');
+    return profile || {
+      key: 'profile',
+      loginId: localStorage.getItem('tm_login_id') || 'User',
+      name: localStorage.getItem('tm_login_id') || 'User',
+      currency: localStorage.getItem('tm_currency') || '₹',
+      pinEnabled: false,
+      pinCode: null,
+      createdDate: new Date().toISOString()
+    };
+  }
+
+  async saveProfile(profileData) {
+    if (!this.db) await this.readyPromise;
+    const current = (await this.get(STORES.SETTINGS, 'profile')) || {};
+    const updated = {
+      ...current,
+      ...profileData,
+      key: 'profile',
+      updatedDate: new Date().toISOString()
+    };
+    if (updated.currency) {
+      localStorage.setItem('tm_currency', updated.currency);
+    }
+    if (updated.loginId) {
+      localStorage.setItem('tm_login_id', updated.loginId);
+    }
+    await this.put(STORES.SETTINGS, updated);
+    return updated;
   }
 
   // Generic IndexedDB operations

@@ -101,17 +101,19 @@
   color: var(--text-dim);
 }
 
-/* Quick Actions Bar */
 .quick-actions-bar {
   display: flex;
-  gap: 10px;
-  margin-bottom: 1.5rem;
+  gap: 8px;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
 }
 
 .quick-actions-bar .btn {
-  flex: 1;
-  padding: 0.75rem 0.5rem;
+  flex: 1 1 110px;
+  min-height: 42px;
+  padding: 0.65rem 0.5rem;
   font-size: 0.82rem;
+  text-align: center;
 }
 
 /* Cashflow Stats Row */
@@ -124,12 +126,22 @@
 
 @media (max-width: 640px) {
   .stats-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 8px;
   }
 }
 
 .stat-card {
   padding: 1rem;
+}
+
+@media (max-width: 480px) {
+  .stat-card {
+    padding: 0.75rem 0.85rem;
+  }
+  .stat-number {
+    font-size: 1.15rem;
+  }
 }
 
 .card-header-mini {

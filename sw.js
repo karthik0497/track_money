@@ -1,5 +1,5 @@
 // Track-Money Service Worker for 100% Offline Capability
-const CACHE_NAME = 'track-money-v1';
+const CACHE_NAME = 'track-money-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -28,7 +28,9 @@ const ASSETS = [
   './js/views/recurringView.js',
   './js/views/reportsView.js',
   './js/views/assistantView.js',
-  './js/views/settingsView.js'
+  './js/views/settingsView.js',
+  './js/views/cameraScanner.js',
+  './js/utils/permissions.js'
 ];
 
 self.addEventListener('install', (event) => {

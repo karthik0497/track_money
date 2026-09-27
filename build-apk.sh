@@ -36,11 +36,11 @@ echo "2. Packaging web bundle to www directory..."
 mkdir -p www
 cp -rf index.html manifest.json sw.js icons css js www/
 
-echo "3. Synchronizing Capacitor Android project..."
-if [ ! -d "android" ]; then
-    npx cap add android
-fi
-npx cap sync android
+echo "3. Synchronizing web assets into Android project..."
+ASSETS_DIR="$PROJECT_DIR/android/app/src/main/assets/public"
+mkdir -p "$ASSETS_DIR"
+cp -rf "$PROJECT_DIR/www/"* "$ASSETS_DIR/"
+echo "✓ Web assets synced directly"
 
 # Ensure local.properties points to Android SDK
 echo "sdk.dir=$ANDROID_HOME" > "$PROJECT_DIR/android/local.properties"

@@ -9,6 +9,7 @@ export class AssistantView {
     this.app = app;
     this.isOpen = false;
     this.isRecording = false;
+    this.lastInputWasVoice = false;
 
     this.speech = new SpeechEngine({
       onStart: () => {
@@ -21,6 +22,7 @@ export class AssistantView {
           inputEl.value = result.transcript;
         }
         if (result.isFinal) {
+          this.lastInputWasVoice = true;
           this.handleSendMessage(result.transcript);
         }
       },
@@ -56,7 +58,12 @@ export class AssistantView {
                 <span class="text-xs text-muted" id="ai-voice-status">100% Offline • Voice & Natural Language</span>
               </div>
             </div>
-            <button class="btn btn-icon" id="ai-drawer-close">✕</button>
+            <div class="ai-header-actions" style="display: flex; align-items: center; gap: 8px;">
+              <button class="btn btn-outline btn-xs" id="btn-voice-speed-pill" title="Toggle AI voice speed">
+                ⚡ ${this.speech.getSpeedRate()}x Speed
+              </button>
+              <button class="btn btn-icon" id="ai-drawer-close">✕</button>
+            </div>
           </div>
 
           <!-- Suggested Prompts Strip -->
@@ -148,6 +155,7 @@ export class AssistantView {
       const text = inputEl.value;
       if (text && text.trim()) {
         inputEl.value = '';
+        this.lastInputWasVoice = false;
         this.handleSendMessage(text);
       }
     });
@@ -157,9 +165,26 @@ export class AssistantView {
         const text = inputEl.value;
         if (text && text.trim()) {
           inputEl.value = '';
+          this.lastInputWasVoice = false;
           this.handleSendMessage(text);
         }
       }
+    });
+
+    // Voice Speed Toggle (1.0x -> 1.2x Crisp -> 1.35x Fast)
+    document.getElementById('btn-voice-speed-pill')?.addEventListener('click', () => {
+      const speeds = [1.0, 1.2, 1.35];
+      const current = this.speech.getSpeedRate();
+      const currentRounded = Math.round(current * 100) / 100;
+      let nextIdx = speeds.findIndex(s => Math.abs(s - currentRounded) < 0.05);
+      if (nextIdx === -1) nextIdx = 0;
+      else nextIdx = (nextIdx + 1) % speeds.length;
+      
+      const newSpeed = speeds[nextIdx];
+      this.speech.setSpeedRate(newSpeed);
+      const pill = document.getElementById('btn-voice-speed-pill');
+      if (pill) pill.textContent = `⚡ ${newSpeed}x Speed`;
+      this.speech.speak(`Voice speed set to ${newSpeed}x`);
     });
 
     micBtn?.addEventListener('click', () => {
@@ -336,6 +361,11 @@ export class AssistantView {
       contentHtml = `
         <div class="msg-bubble">
           ${this.formatMarkdown(msg.text)}
+          <div style="display: flex; justify-content: flex-end; margin-top: 6px;">
+            <button class="btn-bubble-speak" title="Listen to Theta AI voice" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #c7d2fe; font-size: 0.72rem; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px;">
+              <span>🔊</span> <span>Listen</span>
+            </button>
+          </div>
         </div>
       `;
     }
@@ -347,6 +377,20 @@ export class AssistantView {
       ${contentHtml}
     `;
     msgContainer.appendChild(msgElement);
+
+    // Speak button handler
+    const speakBtn = msgElement.querySelector('.btn-bubble-speak');
+    if (speakBtn) {
+      speakBtn.addEventListener('click', () => {
+        this.speech.speak(msg.text);
+      });
+    }
+
+    // Auto-speak reply if user spoke via microphone
+    if (this.lastInputWasVoice && msg.text && msg.type !== 'confirmation_card') {
+      this.speech.speak(msg.text);
+      this.lastInputWasVoice = false;
+    }
 
     // Attach click events on the specific newly created message element
     const confirmBtn = msgElement.querySelector('.confirm-action-btn');

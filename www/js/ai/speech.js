@@ -108,16 +108,66 @@ export class SpeechEngine {
     }
   }
 
+  getSpeedRate() {
+    const saved = localStorage.getItem('tm_voice_speed');
+    return saved ? parseFloat(saved) : 1.20; // Upgraded from 1.05 to brisk, natural 1.20x
+  }
+
+  setSpeedRate(rate) {
+    const validRate = Math.min(Math.max(parseFloat(rate) || 1.2, 0.8), 1.6);
+    localStorage.setItem('tm_voice_speed', validRate.toString());
+    return validRate;
+  }
+
+  getBestVoice() {
+    if (!('speechSynthesis' in window)) return null;
+    const voices = window.speechSynthesis.getVoices();
+    if (!voices || voices.length === 0) return null;
+
+    // Prefer high quality natural sounding English voices
+    const preferred = voices.find(v => 
+      (v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Zira') || v.name.includes('Premium')))
+    ) || voices.find(v => v.lang === 'en-IN' || v.lang === 'en-US' || v.lang === 'en-GB') || voices.find(v => v.lang.startsWith('en'));
+
+    return preferred || voices[0];
+  }
+
   speak(text) {
     if (!('speechSynthesis' in window)) return;
     try {
       window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 1.05;
-      utterance.pitch = 1.0;
+
+      // Clean markdown, symbols, and currency for smooth natural audio pronunciation
+      let cleanText = text
+        .replace(/\*\*(.*?)\*\*/g, '$1')
+        .replace(/\*(.*?)\*/g, '$1')
+        .replace(/₹\s?([0-9,]+(\.[0-9]+)?)/g, '$1 rupees')
+        .replace(/\$\s?([0-9,]+(\.[0-9]+)?)/g, '$1 dollars')
+        .replace(/•/g, '')
+        .replace(/[\u{1F300}-\u{1FAFF}]/gu, '') // strip emojis for speech
+        .replace(/\n+/g, '. ')
+        .trim();
+
+      if (!cleanText) return;
+
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.rate = this.getSpeedRate(); // Brisk and natural (1.20x)
+      utterance.pitch = 1.02;
+
+      const bestVoice = this.getBestVoice();
+      if (bestVoice) {
+        utterance.voice = bestVoice;
+      }
+
       window.speechSynthesis.speak(utterance);
     } catch (e) {
       console.warn('Speech synthesis error:', e);
+    }
+  }
+
+  stopSpeaking() {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
     }
   }
 }

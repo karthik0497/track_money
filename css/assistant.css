@@ -375,3 +375,39 @@
   70% { box-shadow: 0 0 0 10px rgba(244, 63, 94, 0); }
   100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0); }
 }
+
+/* Desktop and Web Hybrid Assistant Styling */
+@media (min-width: 768px) {
+  .ai-drawer-backdrop {
+    align-items: center;
+    padding: 2rem;
+  }
+  .ai-drawer-card {
+    border-radius: var(--radius-lg);
+    height: 75vh;
+    max-height: 650px;
+    box-shadow: 0 16px 60px rgba(0, 0, 0, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+  }
+}
+
+@media (max-width: 480px) {
+  .ai-fab {
+    bottom: 74px;
+    right: 16px;
+    width: 52px;
+    height: 52px;
+  }
+  .ai-drawer-header {
+    padding: 0.85rem 1rem;
+  }
+  .ai-suggestions-carousel {
+    padding: 6px 1rem;
+  }
+  .ai-chat-messages {
+    padding: 0.85rem 1rem;
+  }
+  .ai-input-bar {
+    padding: 0.65rem 1rem;
+  }
+}

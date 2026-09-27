@@ -21,11 +21,18 @@ class TrackMoneyApp {
     this.assistantCoordinator = null;
     this.assistantView = null;
     this.cameraScanner = new CameraScannerModal(this);
+    this.deferredInstallPrompt = null;
+    this.isInstalled = window.matchMedia('(display-mode: standalone)').matches || !!navigator.standalone;
   }
 
   async init() {
-    // 1. Check Security PIN Lock
-    const profile = await this.storage.get('app_settings', 'profile');
+    // 0. Setup PWA install listeners
+    this.setupPwaInstall();
+
+    // 1. Check Profile & PIN Lock
+    const profile = await this.storage.getProfile();
+    this.updateHeaderProfileBadge(profile.loginId || profile.name || 'User');
+
     if (profile && profile.pinEnabled && profile.pinCode) {
       const unlocked = await this.showPinLockScreen(profile.pinCode);
       if (!unlocked) return;
@@ -66,6 +73,11 @@ class TrackMoneyApp {
       navigator.serviceWorker.register('./sw.js').catch(err => {
         console.log('SW registration skipped:', err);
       });
+    }
+
+    // 8. Frictionless Onboarding check for first-time visitors
+    if (!localStorage.getItem('tm_onboarding_shown')) {
+      setTimeout(() => this.showOnboardingModal(), 500);
     }
   }
 
@@ -115,12 +127,25 @@ class TrackMoneyApp {
     });
 
     // Header buttons
+    document.getElementById('header-install-btn')?.addEventListener('click', () => {
+      this.triggerInstallPrompt();
+    });
+
+    document.getElementById('header-profile-btn')?.addEventListener('click', () => {
+      this.openProfileModal();
+    });
+
     document.getElementById('header-camera-btn')?.addEventListener('click', () => {
       this.openCameraScanner();
     });
 
     document.getElementById('header-voice-btn')?.addEventListener('click', () => {
       this.openAiAssistant();
+    });
+
+    document.getElementById('nav-install-app')?.addEventListener('click', () => {
+      this.closeMoreSheet();
+      this.triggerInstallPrompt();
     });
   }
 
@@ -184,6 +209,298 @@ class TrackMoneyApp {
       netEl.textContent = `Net: ${AccountModel.formatCurrency(metrics.netPosition)}`;
       netEl.className = `pill ${metrics.netPosition >= 0 ? 'pill-success' : 'pill-danger'}`;
     }
+
+    const profile = await this.storage.getProfile();
+    this.updateHeaderProfileBadge(profile.loginId || profile.name || 'User');
+
+    const headerInstallBtn = document.getElementById('header-install-btn');
+    if (headerInstallBtn) {
+      headerInstallBtn.style.display = this.isInstalled ? 'none' : 'inline-flex';
+    }
+  }
+
+  updateHeaderProfileBadge(name) {
+    const nameEl = document.getElementById('header-login-name');
+    const avatarEl = document.getElementById('header-avatar-mini');
+    const displayName = name || 'User';
+    if (nameEl) nameEl.textContent = displayName;
+    if (avatarEl) {
+      avatarEl.textContent = displayName.charAt(0).toUpperCase();
+    }
+  }
+
+  setupPwaInstall() {
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      this.deferredInstallPrompt = e;
+      const headerInstallBtn = document.getElementById('header-install-btn');
+      if (headerInstallBtn && !this.isInstalled) {
+        headerInstallBtn.style.display = 'inline-flex';
+      }
+      const pwaBadge = document.getElementById('badge-pwa-status');
+      if (pwaBadge) pwaBadge.textContent = 'Ready to Install ⚡';
+    });
+
+    window.addEventListener('appinstalled', () => {
+      this.isInstalled = true;
+      this.deferredInstallPrompt = null;
+      const headerInstallBtn = document.getElementById('header-install-btn');
+      if (headerInstallBtn) headerInstallBtn.style.display = 'none';
+      const pwaBadge = document.getElementById('badge-pwa-status');
+      if (pwaBadge) {
+        pwaBadge.textContent = 'Installed ✓';
+        pwaBadge.className = 'badge badge-success';
+      }
+      this.showToast('Track-Money installed as Hybrid App successfully!');
+    });
+  }
+
+  async triggerInstallPrompt() {
+    if (this.deferredInstallPrompt) {
+      try {
+        this.deferredInstallPrompt.prompt();
+        const { outcome } = await this.deferredInstallPrompt.userChoice;
+        if (outcome === 'accepted') {
+          this.showToast('Installing Track-Money...');
+          this.isInstalled = true;
+          const headerInstallBtn = document.getElementById('header-install-btn');
+          if (headerInstallBtn) headerInstallBtn.style.display = 'none';
+        }
+        this.deferredInstallPrompt = null;
+      } catch (err) {
+        console.warn('Install prompt error:', err);
+        this.showInstallGuideModal();
+      }
+    } else {
+      this.showInstallGuideModal();
+    }
+  }
+
+  showInstallGuideModal() {
+    const modalRoot = document.getElementById('global-modal-root');
+
+    modalRoot.innerHTML = `
+      <div class="modal-backdrop fade-in" id="install-guide-backdrop">
+        <div class="modal-card slide-up" style="max-width: 500px;">
+          <div class="modal-header">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 1.4rem;">📲</span>
+              <h3 class="font-bold">Install as Hybrid App</h3>
+            </div>
+            <button class="btn btn-icon" id="close-install-guide">✕</button>
+          </div>
+
+          <div style="margin-bottom: 1.25rem;">
+            <p class="text-sm text-muted">
+              Track-Money runs as an installable Progressive Web App (PWA). You can download and install it straight from your browser with zero APK downloads required!
+            </p>
+          </div>
+
+          <div class="card" style="margin-bottom: 1rem; background: rgba(99, 102, 241, 0.08); border-color: rgba(99, 102, 241, 0.25);">
+            <div class="font-bold text-sm" style="color: #a5b4fc; margin-bottom: 6px;">📱 On Android (Chrome / Brave / Samsung)</div>
+            <ol class="text-xs text-secondary" style="padding-left: 1.2rem; display: flex; flex-direction: column; gap: 4px;">
+              <li>Tap the three dots menu (<strong>⋮</strong>) in the top right of your browser.</li>
+              <li>Tap <strong>"Install app"</strong> or <strong>"Add to Home screen"</strong>.</li>
+              <li>Track-Money will install directly to your phone screen and app drawer!</li>
+            </ol>
+          </div>
+
+          <div class="card" style="margin-bottom: 1rem; background: rgba(16, 185, 129, 0.08); border-color: rgba(16, 185, 129, 0.25);">
+            <div class="font-bold text-sm" style="color: #6ee7b7; margin-bottom: 6px;">🍏 On iPhone & iPad (Safari)</div>
+            <ol class="text-xs text-secondary" style="padding-left: 1.2rem; display: flex; flex-direction: column; gap: 4px;">
+              <li>Tap the <strong>Share</strong> button (box with upward arrow <span style="font-size: 1rem;">⎋</span>) at the bottom.</li>
+              <li>Scroll down and tap <strong>"Add to Home Screen" (+)</strong>.</li>
+              <li>Tap <strong>Add</strong> in the top right. It opens full screen like a native app!</li>
+            </ol>
+          </div>
+
+          <div class="card" style="margin-bottom: 1.25rem; background: rgba(245, 158, 11, 0.08); border-color: rgba(245, 158, 11, 0.25);">
+            <div class="font-bold text-sm" style="color: #fde68a; margin-bottom: 6px;">💻 On Desktop / Laptop (Chrome / Edge / Mac)</div>
+            <ol class="text-xs text-secondary" style="padding-left: 1.2rem; display: flex; flex-direction: column; gap: 4px;">
+              <li>Click the <strong>Install</strong> icon (<span style="font-size: 1rem;">⊕</span>) on the right side of the URL address bar.</li>
+              <li>Click <strong>Install</strong> to add it to your Desktop, Dock, or Start Menu.</li>
+            </ol>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-primary" id="btn-guide-ok" style="width: 100%;">
+              Understood
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('close-install-guide')?.addEventListener('click', () => modalRoot.innerHTML = '');
+    document.getElementById('btn-guide-ok')?.addEventListener('click', () => modalRoot.innerHTML = '');
+    document.getElementById('install-guide-backdrop')?.addEventListener('click', (e) => {
+      if (e.target.id === 'install-guide-backdrop') modalRoot.innerHTML = '';
+    });
+  }
+
+  async showOnboardingModal() {
+    const modalRoot = document.getElementById('global-modal-root');
+    const profile = await this.storage.getProfile();
+    const currentLoginId = (profile.loginId && profile.loginId !== 'User') ? profile.loginId : '';
+
+    modalRoot.innerHTML = `
+      <div class="modal-backdrop fade-in" id="onboarding-backdrop">
+        <div class="modal-card slide-up" style="max-width: 480px; text-align: center;">
+          <div style="font-size: 2.8rem; margin-bottom: 8px;">💎</div>
+          <h3 style="font-size: 1.4rem; font-weight: 800; margin-bottom: 6px;">Welcome to Track-Money</h3>
+          <p class="text-sm text-muted" style="margin-bottom: 1.25rem;">
+            100% Private, Local-First Personal Finance. All your records stay strictly in your device's browser memory (IndexedDB). Zero centralized servers or tracking.
+          </p>
+
+          <form id="onboarding-form" style="text-align: left;">
+            <div class="form-group">
+              <label>Choose your Login ID or Name</label>
+              <input type="text" id="input-onboarding-login" class="form-input font-bold" 
+                     placeholder="e.g. Karthik / Alex" value="${currentLoginId}" required autofocus>
+              <span class="text-xs text-muted" style="display: block; margin-top: 4px;">No password needed. Next time you open, your workspace will be ready!</span>
+            </div>
+
+            <div class="form-group">
+              <label>Preferred Currency</label>
+              <select id="select-onboarding-currency" class="form-input">
+                <option value="₹" selected>₹ INR (Indian Rupee)</option>
+                <option value="$">$ USD (US Dollar)</option>
+                <option value="€">€ EUR (Euro)</option>
+                <option value="£">£ GBP (British Pound)</option>
+                <option value="AED">AED (UAE Dirham)</option>
+                <option value="SGD">SGD (Singapore Dollar)</option>
+              </select>
+            </div>
+
+            <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 8px;">
+              <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.85rem;">
+                🚀 Open My Private Workspace
+              </button>
+              <button type="button" class="btn btn-text text-muted" id="btn-onboarding-skip" style="width: 100%;">
+                Continue as Guest (Setup later)
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('btn-onboarding-skip')?.addEventListener('click', () => {
+      localStorage.setItem('tm_onboarding_shown', 'true');
+      modalRoot.innerHTML = '';
+    });
+
+    document.getElementById('onboarding-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const loginId = document.getElementById('input-onboarding-login').value.trim() || 'User';
+      const currency = document.getElementById('select-onboarding-currency').value || '₹';
+
+      await this.storage.saveProfile({
+        loginId,
+        name: loginId,
+        currency
+      });
+
+      localStorage.setItem('tm_onboarding_shown', 'true');
+      this.updateHeaderProfileBadge(loginId);
+      modalRoot.innerHTML = '';
+      this.showToast(`Welcome, ${loginId}! Workspace initialized locally.`);
+      await this.refreshCurrentView();
+    });
+  }
+
+  async openProfileModal() {
+    const modalRoot = document.getElementById('global-modal-root');
+    const profile = await this.storage.getProfile();
+    const txCount = (await this.storage.getAll('transactions')).length;
+    const accCount = (await this.storage.getAll('accounts')).length;
+
+    modalRoot.innerHTML = `
+      <div class="modal-backdrop fade-in" id="profile-modal-backdrop">
+        <div class="modal-card slide-up" style="max-width: 480px;">
+          <div class="modal-header">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="profile-avatar-mini" style="width: 28px; height: 28px; font-size: 0.9rem;">
+                ${(profile.loginId || 'U').charAt(0).toUpperCase()}
+              </span>
+              <h3 class="font-bold">Workspace: ${profile.loginId || 'User'}</h3>
+            </div>
+            <button class="btn btn-icon" id="close-profile-modal">✕</button>
+          </div>
+
+          <div class="card" style="margin-bottom: 1.25rem; background: rgba(99, 102, 241, 0.1); border-color: rgba(99, 102, 241, 0.25);">
+            <div class="text-xs text-muted">LOCAL IDENTITY GUARANTEE</div>
+            <div class="font-bold text-sm" style="margin: 4px 0;">100% Private Device Memory (IndexedDB)</div>
+            <div class="text-xs text-muted">Zero Cloud Servers • ${accCount} Accounts • ${txCount} Transactions</div>
+          </div>
+
+          <form id="edit-profile-quick-form">
+            <div class="form-group">
+              <label>Login ID / Profile Name</label>
+              <input type="text" id="quick-login-id" class="form-input font-bold" value="${profile.loginId || 'User'}" required>
+            </div>
+
+            <div class="form-group">
+              <label>Currency</label>
+              <select id="quick-currency" class="form-input">
+                <option value="₹" ${profile.currency === '₹' ? 'selected' : ''}>₹ INR (Indian Rupee)</option>
+                <option value="$" ${profile.currency === '$' ? 'selected' : ''}>$ USD (US Dollar)</option>
+                <option value="€" ${profile.currency === '€' ? 'selected' : ''}>€ EUR (Euro)</option>
+                <option value="£" ${profile.currency === '£' ? 'selected' : ''}>£ GBP (British Pound)</option>
+                <option value="AED" ${profile.currency === 'AED' ? 'selected' : ''}>AED (UAE Dirham)</option>
+                <option value="SGD" ${profile.currency === 'SGD' ? 'selected' : ''}>SGD (Singapore Dollar)</option>
+              </select>
+            </div>
+
+            <div class="modal-footer" style="padding-top: 0.5rem; justify-content: space-between;">
+              <button type="button" class="btn btn-outline btn-xs" id="quick-export-json">
+                💾 Backup JSON
+              </button>
+              <div style="display: flex; gap: 8px;">
+                <button type="button" class="btn btn-outline btn-sm" id="cancel-profile-modal">Close</button>
+                <button type="submit" class="btn btn-primary btn-sm">Save Changes</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('close-profile-modal')?.addEventListener('click', () => modalRoot.innerHTML = '');
+    document.getElementById('cancel-profile-modal')?.addEventListener('click', () => modalRoot.innerHTML = '');
+    document.getElementById('profile-modal-backdrop')?.addEventListener('click', (e) => {
+      if (e.target.id === 'profile-modal-backdrop') modalRoot.innerHTML = '';
+    });
+
+    document.getElementById('quick-export-json')?.addEventListener('click', async () => {
+      const data = await this.storage.exportAllData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `track_money_${profile.loginId || 'backup'}_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      this.showToast('Full JSON backup downloaded.');
+    });
+
+    document.getElementById('edit-profile-quick-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const newId = document.getElementById('quick-login-id').value.trim();
+      const newCur = document.getElementById('quick-currency').value;
+      if (!newId) return;
+
+      await this.storage.saveProfile({
+        loginId: newId,
+        name: newId,
+        currency: newCur
+      });
+
+      this.updateHeaderProfileBadge(newId);
+      modalRoot.innerHTML = '';
+      this.showToast(`Login ID updated to ${newId}`);
+      await this.refreshCurrentView();
+    });
   }
 
   openAiAssistant() {

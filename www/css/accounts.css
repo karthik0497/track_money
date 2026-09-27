@@ -10,7 +10,8 @@
 
 @media (max-width: 600px) {
   .accounts-summary-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 6px;
   }
 }
 

@@ -11,9 +11,26 @@ export class DashboardView {
   async render(container) {
     const metrics = await this.storage.getDashboardMetrics();
     const isNegativeNet = metrics.netPosition < 0;
+    const currentMonthYear = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
 
     container.innerHTML = `
       <div class="dashboard-container fade-in">
+        <!-- Install as Hybrid App & Privacy Banner -->
+        ${!this.app.isInstalled ? `
+          <div class="card pwa-install-banner" style="margin-bottom: 1.25rem; background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(16, 185, 129, 0.15)); border: 1px solid rgba(99, 102, 241, 0.35); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 1.6rem;">📲</span>
+              <div>
+                <div class="font-bold text-sm">Download & Install as Hybrid App</div>
+                <div class="text-xs text-muted">Use offline directly from browser. 100% private local storage, zero APK needed!</div>
+              </div>
+            </div>
+            <button class="btn btn-primary btn-xs" id="dash-btn-install-banner">
+              ⚡ Install App
+            </button>
+          </div>
+        ` : ''}
+
         <!-- Top Executive Hero Banner: Net Position -->
         <div class="hero-net-card ${isNegativeNet ? 'hero-negative' : 'hero-positive'}">
           <div class="hero-header">
@@ -70,7 +87,7 @@ export class DashboardView {
 
         <!-- Monthly Performance Metrics -->
         <div class="section-title">
-          <h3>September 2026 Cash Flow</h3>
+          <h3>${currentMonthYear} Cash Flow</h3>
           <span class="badge badge-subtle">Real-Time</span>
         </div>
 
@@ -335,6 +352,10 @@ export class DashboardView {
   }
 
   attachEvents(container) {
+    container.querySelector('#dash-btn-install-banner')?.addEventListener('click', () => {
+      this.app.triggerInstallPrompt();
+    });
+
     container.querySelector('#dash-btn-add-tx')?.addEventListener('click', () => {
       this.app.openTransactionModal();
     });
