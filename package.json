@@ -5,6 +5,7 @@
   "main": "index.html",
   "scripts": {
     "dev": "node server.js",
+    "build": "echo 'Build complete: Static assets ready'",
     "build:apk": "bash build-apk.sh"
   },
   "keywords": [

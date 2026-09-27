@@ -1,0 +1,5 @@
+android/
+*.apk
+*.sh
+.gradle/
+capacitor.config.json
