@@ -3,3 +3,4 @@ android/
 *.sh
 .gradle/
 capacitor.config.json
+server.js
