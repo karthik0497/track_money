@@ -287,6 +287,9 @@ export class DashboardView {
                     <div class="tx-method text-xs text-muted">
                       ${tx.paymentMethod || 'Manual'}
                     </div>
+                    <div class="tx-item-actions" style="margin-top: 4px;">
+                      <button class="btn-item-action edit-tx-btn" data-id="${tx.id}" title="Edit Record">✏️</button>
+                    </div>
                   </div>
                 </div>
               `;
@@ -408,6 +411,14 @@ export class DashboardView {
         const cardId = e.currentTarget.dataset.accountId;
         const amount = e.currentTarget.dataset.amount;
         this.app.openCreditCardPayModal(cardId, amount);
+      });
+    });
+
+    container.querySelectorAll('.edit-tx-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = e.currentTarget.dataset.id;
+        this.app.openTransactionModal({ editTxId: id });
       });
     });
   }

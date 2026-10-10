@@ -541,16 +541,22 @@ class TrackMoneyApp {
     const accounts = await this.storage.getAll('accounts');
     const categories = await this.storage.getAll('categories');
 
-    const prefill = options.prefill || {};
+    let editTx = options.editTx || null;
+    if (options.editTxId) {
+      editTx = await this.storage.get('transactions', options.editTxId);
+    }
+
+    const isEdit = !!editTx;
+    const prefill = editTx || options.prefill || {};
     const defaultAccId = options.preselectedAccountId || prefill.accountId || (accounts[0] ? accounts[0].id : '');
 
     modalRoot.innerHTML = `
       <div class="modal-backdrop fade-in" id="tx-modal-backdrop">
         <div class="modal-card slide-up">
           <div class="modal-header">
-            <h3>Record Transaction</h3>
+            <h3>${isEdit ? 'Edit Transaction' : 'Record Transaction'}</h3>
             <div style="display: flex; gap: 8px; align-items: center;">
-              <button type="button" class="btn btn-outline btn-xs" id="tx-scan-receipt-btn" title="Scan receipt with camera">📷 Scan Bill</button>
+              ${!isEdit ? '<button type="button" class="btn btn-outline btn-xs" id="tx-scan-receipt-btn" title="Scan receipt with camera">📷 Scan Bill</button>' : ''}
               <button class="btn btn-icon" id="close-tx-modal">✕</button>
             </div>
           </div>
@@ -632,7 +638,7 @@ class TrackMoneyApp {
 
             <div class="modal-footer">
               <button type="button" class="btn btn-outline" id="cancel-tx-modal">Cancel</button>
-              <button type="submit" class="btn btn-primary">Save Transaction</button>
+              <button type="submit" class="btn btn-primary">${isEdit ? 'Update Transaction' : 'Save Transaction'}</button>
             </div>
           </form>
         </div>
@@ -651,21 +657,30 @@ class TrackMoneyApp {
     document.getElementById('global-tx-form')?.addEventListener('submit', async (e) => {
       e.preventDefault();
       const fd = new FormData(e.target);
-      const tx = await this.storage.addTransaction({
+      const txPayload = {
         type: fd.get('type'),
         amount: Number(fd.get('amount')),
         accountId: fd.get('accountId'),
         category: fd.get('category'),
-        subcategory: fd.get('subcategory'),
+        subcategory: fd.get('subcategory') || '',
         description: fd.get('description'),
         date: fd.get('date'),
         paymentMethod: fd.get('paymentMethod'),
-        notes: fd.get('notes')
-      });
+        notes: fd.get('notes') || ''
+      };
 
-      modalRoot.innerHTML = '';
-      await this.refreshCurrentView();
-      this.showToast(`Recorded ${tx.type.toUpperCase()}: ${AccountModel.formatCurrency(tx.amount)}`);
+      let resultTx;
+      if (isEdit && editTx.id) {
+        resultTx = await this.storage.updateTransaction(editTx.id, txPayload);
+        modalRoot.innerHTML = '';
+        await this.refreshCurrentView();
+        this.showToast(`Updated ${resultTx.type.toUpperCase()}: ${AccountModel.formatCurrency(resultTx.amount)}`);
+      } else {
+        resultTx = await this.storage.addTransaction(txPayload);
+        modalRoot.innerHTML = '';
+        await this.refreshCurrentView();
+        this.showToast(`Recorded ${resultTx.type.toUpperCase()}: ${AccountModel.formatCurrency(resultTx.amount)}`);
+      }
     });
   }
 

@@ -1,7 +1,7 @@
 // Track-Money: IndexedDB Local Relational Storage Engine
 import { DB_NAME, DB_VERSION, STORES, DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES, DEFAULT_TRANSACTIONS, DEFAULT_RECURRING } from './schema.js';
 
-class StorageEngine {
+export class StorageEngine {
   constructor() {
     this.db = null;
     this.isReady = false;
@@ -83,52 +83,46 @@ class StorageEngine {
   }
 
   async seedInitialDataIfEmpty() {
-    // 1. Purge any previously seeded dummy/sample accounts, transactions, or recurring schedules
-    const DEMO_ACCOUNT_IDS = ['acc_hdfc_bank', 'acc_sbi_savings', 'acc_demat', 'acc_cash', 'acc_hdfc_cc', 'acc_amazon_pay'];
-    const DEMO_TX_IDS = ['tx_001', 'tx_002', 'tx_003', 'tx_004', 'tx_005', 'tx_006', 'tx_007', 'tx_008', 'tx_009', 'tx_010'];
-    const DEMO_REC_IDS = ['rec_salary', 'rec_rent', 'rec_netflix', 'rec_sip'];
+    // 1. One-time purge of previously seeded dummy demo accounts/transactions if not already done
+    const isCleaned = typeof localStorage !== 'undefined' ? localStorage.getItem('tm_demo_cleaned_v2') : null;
+    if (!isCleaned) {
+      const DEMO_ACCOUNT_IDS = ['acc_hdfc_bank', 'acc_sbi_savings', 'acc_demat', 'acc_cash', 'acc_hdfc_cc', 'acc_amazon_pay'];
+      const DEMO_TX_IDS = ['tx_001', 'tx_002', 'tx_003', 'tx_004', 'tx_005', 'tx_006', 'tx_007', 'tx_008', 'tx_009', 'tx_010'];
+      const DEMO_REC_IDS = ['rec_salary', 'rec_rent', 'rec_netflix', 'rec_sip'];
 
-    let purgedDemo = false;
-    for (const accId of DEMO_ACCOUNT_IDS) {
-      const acc = await this.get(STORES.ACCOUNTS, accId);
-      if (acc) {
-        await this.delete(STORES.ACCOUNTS, accId);
-        purgedDemo = true;
+      for (const accId of DEMO_ACCOUNT_IDS) {
+        const acc = await this.get(STORES.ACCOUNTS, accId);
+        if (acc) await this.delete(STORES.ACCOUNTS, accId);
       }
-    }
-    for (const txId of DEMO_TX_IDS) {
-      const tx = await this.get(STORES.TRANSACTIONS, txId);
-      if (tx) {
-        await this.delete(STORES.TRANSACTIONS, txId);
-        purgedDemo = true;
+      for (const txId of DEMO_TX_IDS) {
+        const tx = await this.get(STORES.TRANSACTIONS, txId);
+        if (tx) await this.delete(STORES.TRANSACTIONS, txId);
       }
-    }
-    for (const recId of DEMO_REC_IDS) {
-      const rec = await this.get(STORES.RECURRING, recId);
-      if (rec) {
-        await this.delete(STORES.RECURRING, recId);
-        purgedDemo = true;
+      for (const recId of DEMO_REC_IDS) {
+        const rec = await this.get(STORES.RECURRING, recId);
+        if (rec) await this.delete(STORES.RECURRING, recId);
       }
-    }
 
-    if (purgedDemo && typeof localStorage !== 'undefined') {
-      const rawSnapshot = localStorage.getItem('tm_backup_snapshot');
-      if (rawSnapshot) {
-        try {
-          const snapshot = JSON.parse(rawSnapshot);
-          if (snapshot.accounts) {
-            snapshot.accounts = snapshot.accounts.filter(a => !DEMO_ACCOUNT_IDS.includes(a.id));
+      if (typeof localStorage !== 'undefined') {
+        const rawSnapshot = localStorage.getItem('tm_backup_snapshot');
+        if (rawSnapshot) {
+          try {
+            const snapshot = JSON.parse(rawSnapshot);
+            if (snapshot.accounts) {
+              snapshot.accounts = snapshot.accounts.filter(a => !DEMO_ACCOUNT_IDS.includes(a.id));
+            }
+            if (snapshot.transactions) {
+              snapshot.transactions = snapshot.transactions.filter(t => !DEMO_TX_IDS.includes(t.id));
+            }
+            if (snapshot.recurring) {
+              snapshot.recurring = snapshot.recurring.filter(r => !DEMO_REC_IDS.includes(r.id));
+            }
+            localStorage.setItem('tm_backup_snapshot', JSON.stringify(snapshot));
+          } catch (e) {
+            localStorage.removeItem('tm_backup_snapshot');
           }
-          if (snapshot.transactions) {
-            snapshot.transactions = snapshot.transactions.filter(t => !DEMO_TX_IDS.includes(t.id));
-          }
-          if (snapshot.recurring) {
-            snapshot.recurring = snapshot.recurring.filter(r => !DEMO_REC_IDS.includes(r.id));
-          }
-          localStorage.setItem('tm_backup_snapshot', JSON.stringify(snapshot));
-        } catch (e) {
-          localStorage.removeItem('tm_backup_snapshot');
         }
+        localStorage.setItem('tm_demo_cleaned_v2', 'true');
       }
     }
 
@@ -341,9 +335,11 @@ class StorageEngine {
 
   async clear(storeName) {
     if (!this.db) await this.readyPromise;
+    if (!this.db.objectStoreNames.contains(storeName)) return true;
     return new Promise((resolve, reject) => {
       const tx = this.db.transaction(storeName, 'readwrite');
       const store = tx.objectStore(storeName);
+      if (!store) return resolve(true);
       const req = store.clear();
       req.onsuccess = () => resolve(true);
       req.onerror = () => reject(req.error);
@@ -358,6 +354,92 @@ class StorageEngine {
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem('tm_backup_snapshot');
     }
+    return true;
+  }
+
+  // Update Existing Account without losing transactions
+  async updateAccount(id, updateData) {
+    if (!this.db) await this.readyPromise;
+    const existing = await this.get(STORES.ACCOUNTS, id);
+    if (!existing) {
+      throw new Error(`Account with ID "${id}" not found.`);
+    }
+
+    const updatedCategory = updateData.category || existing.category;
+    const isCredit = updatedCategory === 'credit';
+
+    const updated = {
+      ...existing,
+      name: updateData.name !== undefined ? updateData.name.trim() : existing.name,
+      category: updatedCategory,
+      type: updateData.type || existing.type,
+      institution: updateData.institution !== undefined ? updateData.institution : (existing.institution || ''),
+      description: updateData.description !== undefined ? updateData.description : existing.description,
+      color: updateData.color || existing.color,
+      icon: updateData.icon || existing.icon,
+      currency: updateData.currency || existing.currency,
+      updatedTimestamp: Date.now()
+    };
+
+    if (!isCredit) {
+      if (updateData.openingBalance !== undefined) {
+        updated.openingBalance = Number(updateData.openingBalance) || 0;
+      }
+      updated.creditLimit = 0;
+      updated.openingOutstanding = 0;
+    } else {
+      if (updateData.creditLimit !== undefined) {
+        updated.creditLimit = Number(updateData.creditLimit) || 0;
+      }
+      if (updateData.openingOutstanding !== undefined) {
+        updated.openingOutstanding = Number(updateData.openingOutstanding) || 0;
+      }
+      if (updateData.billingCycle !== undefined) {
+        updated.billingCycle = updateData.billingCycle;
+      }
+      if (updateData.dueDate !== undefined) {
+        updated.dueDate = updateData.dueDate;
+      }
+      if (updateData.interestRate !== undefined) {
+        updated.interestRate = Number(updateData.interestRate) || 0;
+      }
+      updated.availableCredit = Math.max(0, (updated.creditLimit || 0) - (updated.openingOutstanding || 0));
+    }
+
+    await this.put(STORES.ACCOUNTS, updated);
+    await this.saveLocalEmergencySnapshot();
+    return updated;
+  }
+
+  // Factory Reset All Data (Completely clear all data and re-seed clean default categories)
+  async resetAllData() {
+    if (!this.db) await this.readyPromise;
+    for (const storeName of Object.values(STORES)) {
+      await this.clear(storeName);
+    }
+
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('tm_backup_snapshot');
+      localStorage.setItem('tm_demo_cleaned_v2', 'true');
+    }
+
+    // Re-seed standard default categories
+    for (const cat of DEFAULT_CATEGORIES) {
+      await this.put(STORES.CATEGORIES, cat);
+    }
+
+    // Re-seed default profile
+    const defaultLoginId = (typeof localStorage !== 'undefined' ? localStorage.getItem('tm_login_id') : null) || 'User';
+    await this.put(STORES.SETTINGS, {
+      key: 'profile',
+      loginId: defaultLoginId,
+      name: defaultLoginId,
+      currency: (typeof localStorage !== 'undefined' ? localStorage.getItem('tm_currency') : null) || '₹',
+      pinEnabled: false,
+      pinCode: null,
+      createdDate: new Date().toISOString()
+    });
+
     return true;
   }
 
@@ -619,7 +701,36 @@ class StorageEngine {
     };
 
     await this.put(STORES.TRANSACTIONS, tx);
+    await this.saveLocalEmergencySnapshot();
     return tx;
+  }
+
+  // Update Existing Transaction
+  async updateTransaction(id, updateData) {
+    if (!this.db) await this.readyPromise;
+    const existing = await this.get(STORES.TRANSACTIONS, id);
+    if (!existing) {
+      throw new Error(`Transaction with ID "${id}" not found.`);
+    }
+
+    const updated = {
+      ...existing,
+      accountId: updateData.accountId !== undefined ? updateData.accountId : existing.accountId,
+      targetAccountId: updateData.targetAccountId !== undefined ? updateData.targetAccountId : existing.targetAccountId,
+      type: updateData.type || existing.type,
+      amount: updateData.amount !== undefined ? Number(updateData.amount) : existing.amount,
+      category: updateData.category || existing.category,
+      subcategory: updateData.subcategory !== undefined ? updateData.subcategory : existing.subcategory,
+      description: updateData.description !== undefined ? updateData.description : existing.description,
+      date: updateData.date || existing.date,
+      paymentMethod: updateData.paymentMethod || existing.paymentMethod,
+      notes: updateData.notes !== undefined ? updateData.notes : existing.notes,
+      updatedTimestamp: Date.now()
+    };
+
+    await this.put(STORES.TRANSACTIONS, updated);
+    await this.saveLocalEmergencySnapshot();
+    return updated;
   }
 
   // AI Audit Logging
@@ -662,28 +773,34 @@ class StorageEngine {
   }
 
   async importData(jsonData) {
-    if (!jsonData || !jsonData.accounts || !jsonData.transactions) {
-      throw new Error('Invalid Track-Money backup JSON file format: Missing accounts or transactions array.');
+    if (!jsonData || typeof jsonData !== 'object') {
+      throw new Error('Invalid Track-Money backup JSON: Must be a valid object.');
+    }
+    if (!Array.isArray(jsonData.accounts) || !Array.isArray(jsonData.transactions)) {
+      throw new Error('Invalid Track-Money backup JSON: Missing accounts or transactions array.');
     }
 
-    // Clear existing records before restore
-    await this.clear(STORES.ACCOUNTS);
-    await this.clear(STORES.TRANSACTIONS);
-    await this.clear(STORES.CATEGORIES);
-    await this.clear(STORES.RECURRING);
-    if (jsonData.aiAuditLogs) {
-      await this.clear(STORES.AI_AUDIT);
+    // Clear all existing stores to prevent duplicates or orphan records
+    for (const storeName of Object.values(STORES)) {
+      await this.clear(storeName);
     }
 
-    // Restore primary entities
-    for (const item of jsonData.accounts) await this.put(STORES.ACCOUNTS, item);
-    for (const item of jsonData.transactions) await this.put(STORES.TRANSACTIONS, item);
+    // Restore accounts
+    for (const item of jsonData.accounts) {
+      await this.put(STORES.ACCOUNTS, item);
+    }
 
+    // Restore transactions
+    for (const item of jsonData.transactions) {
+      await this.put(STORES.TRANSACTIONS, item);
+    }
+
+    // Restore categories
     if (jsonData.categories && Array.isArray(jsonData.categories) && jsonData.categories.length > 0) {
       for (const item of jsonData.categories) await this.put(STORES.CATEGORIES, item);
     }
 
-    // Auto-merge any missing default categories (ensuring new categories are never lost)
+    // Auto-merge standard default categories ensuring none are missing
     const currentCategories = await this.getAll(STORES.CATEGORIES);
     const existingNames = new Set(currentCategories.map(c => (c.name || '').toLowerCase()));
     for (const cat of DEFAULT_CATEGORIES) {
@@ -692,20 +809,30 @@ class StorageEngine {
       }
     }
 
+    // Restore recurring schedules
     if (jsonData.recurring && Array.isArray(jsonData.recurring)) {
       for (const item of jsonData.recurring) await this.put(STORES.RECURRING, item);
     }
+
+    // Restore AI audit logs
     if (jsonData.aiAuditLogs && Array.isArray(jsonData.aiAuditLogs)) {
       for (const item of jsonData.aiAuditLogs) await this.put(STORES.AI_AUDIT, item);
     }
+
+    // Restore settings
     if (jsonData.settings && Array.isArray(jsonData.settings)) {
       for (const item of jsonData.settings) {
         await this.put(STORES.SETTINGS, item);
         if (item.key === 'profile') {
-          if (item.currency) localStorage.setItem('tm_currency', item.currency);
-          if (item.loginId) localStorage.setItem('tm_login_id', item.loginId);
+          if (item.currency && typeof localStorage !== 'undefined') localStorage.setItem('tm_currency', item.currency);
+          if (item.loginId && typeof localStorage !== 'undefined') localStorage.setItem('tm_login_id', item.loginId);
         }
       }
+    }
+
+    // Mark demo as cleaned so restored accounts aren't purged
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('tm_demo_cleaned_v2', 'true');
     }
 
     await this.saveLocalEmergencySnapshot();

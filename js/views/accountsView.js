@@ -111,9 +111,10 @@ export class AccountsView {
                         <span class="badge badge-subtle text-xs">${acc.type}</span>
                       </div>
                     </div>
-                    <button class="btn btn-icon btn-sm view-acc-btn" data-id="${acc.id}" title="View Details">
-                      ➔
-                    </button>
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                      <button class="btn btn-icon btn-sm edit-acc-btn" data-id="${acc.id}" title="Edit Account">✏️</button>
+                      <button class="btn btn-icon btn-sm view-acc-btn" data-id="${acc.id}" title="View Details">➔</button>
+                    </div>
                   </div>
 
                   <div class="acc-balance-block">
@@ -174,7 +175,11 @@ export class AccountsView {
                           <span class="badge badge-subtle text-xs">${acc.type}</span>
                         </div>
                       </div>
-                      <span class="badge ${util > 30 ? 'badge-warning' : 'badge-success'}">${util}% util</span>
+                      <div style="display: flex; gap: 6px; align-items: center;">
+                        <span class="badge ${util > 30 ? 'badge-warning' : 'badge-success'}">${util}% util</span>
+                        <button class="btn btn-icon btn-sm edit-acc-btn" data-id="${acc.id}" title="Edit Account">✏️</button>
+                        <button class="btn btn-icon btn-sm view-acc-btn" data-id="${acc.id}" title="View Details">➔</button>
+                      </div>
                     </div>
 
                     <div class="credit-card-balances">
@@ -324,6 +329,9 @@ export class AccountsView {
               <button class="btn btn-primary btn-sm" id="detail-add-tx">
                 ➕ Add Transaction
               </button>
+              <button class="btn btn-outline btn-sm" id="detail-edit-acc" data-id="${acc.id}">
+                ✏️ Edit Account
+              </button>
               ${isCredit ? `
                 <button class="btn btn-warning btn-sm" id="detail-pay-bill">
                   💳 Pay Credit Bill
@@ -361,6 +369,7 @@ export class AccountsView {
                         <div class="tx-amount-col">
                           <div class="font-bold ${amt.class}">${amt.text}</div>
                           <div class="text-xs text-muted">${tx.paymentMethod || ''}</div>
+                          <button class="btn-item-action edit-tx-btn" data-id="${tx.id}" title="Edit Record" style="margin-top: 4px; padding: 2px 6px;">✏️</button>
                         </div>
                       </div>
                     `;
@@ -395,6 +404,19 @@ export class AccountsView {
       this.app.openTransferModal({ fromAccountId: acc.id });
     });
 
+    document.getElementById('detail-edit-acc')?.addEventListener('click', () => {
+      modalRoot.innerHTML = '';
+      this.openEditAccountModal(acc.id);
+    });
+
+    modalRoot.querySelectorAll('.edit-tx-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        modalRoot.innerHTML = '';
+        this.app.openTransactionModal({ editTxId: e.currentTarget.dataset.id });
+      });
+    });
+
     document.getElementById('detail-delete-acc')?.addEventListener('click', async () => {
       if (confirm(`Are you sure you want to delete "${acc.name}"? This account will be removed.`)) {
         await this.storage.delete('accounts', acc.id);
@@ -424,6 +446,14 @@ export class AccountsView {
 
     container.querySelector('#empty-btn-add-credit')?.addEventListener('click', () => {
       this.openAddAccountModal('credit');
+    });
+
+    // Edit Account
+    container.querySelectorAll('.edit-acc-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.openEditAccountModal(e.currentTarget.dataset.id);
+      });
     });
 
     // View details
@@ -461,10 +491,17 @@ export class AccountsView {
     });
   }
 
-  openAddAccountModal(preferredCategory = null, prefill = null) {
+  async openEditAccountModal(accountId) {
+    const acc = await this.storage.getAccountById(accountId);
+    if (!acc) return;
+    this.openAddAccountModal(acc.category, acc, accountId);
+  }
+
+  openAddAccountModal(preferredCategory = null, prefill = null, editAccountId = null) {
     const modalRoot = document.getElementById('global-modal-root') || document.body;
     if (!modalRoot) return;
 
+    const isEditing = Boolean(editAccountId);
     const initialCategory = prefill?.category || preferredCategory || (this.activeTab === 'credit' ? 'credit' : 'debit');
     const currency = localStorage.getItem('tm_currency') || '₹';
 
@@ -476,10 +513,14 @@ export class AccountsView {
               <span id="modal-header-icon" style="font-size: 1.35rem;">${initialCategory === 'credit' ? '💳' : '🏦'}</span>
               <div>
                 <h3 id="modal-title-text" style="margin: 0; font-size: 1.15rem;">
-                  ${initialCategory === 'credit' ? 'Add Credit / Card Account' : 'Add Financial / Asset Account'}
+                  ${isEditing 
+                    ? (initialCategory === 'credit' ? 'Edit Credit / Card Account' : 'Edit Financial / Asset Account')
+                    : (initialCategory === 'credit' ? 'Add Credit / Card Account' : 'Add Financial / Asset Account')}
                 </h3>
                 <span class="text-xs text-muted" id="modal-subtitle-text">
-                  ${initialCategory === 'credit' ? 'Configure card limits, billing & dues' : 'Bank accounts, savings, deposits & cash'}
+                  ${isEditing
+                    ? 'Update account name, type, balances & settings'
+                    : (initialCategory === 'credit' ? 'Configure card limits, billing & dues' : 'Bank accounts, savings, deposits & cash')}
                 </span>
               </div>
             </div>
@@ -581,7 +622,7 @@ export class AccountsView {
             <!-- Sticky Modal Footer -->
             <div class="modal-footer">
               <button type="button" class="btn btn-outline" id="cancel-add-acc">Cancel</button>
-              <button type="submit" class="btn btn-primary" id="submit-save-acc">Save Account</button>
+              <button type="submit" class="btn btn-primary" id="submit-save-acc">${isEditing ? 'Update Account' : 'Save Account'}</button>
             </div>
           </form>
         </div>
@@ -616,8 +657,8 @@ export class AccountsView {
         debitFields.style.display = 'none';
         creditFields.style.display = 'block';
         if (financialLabel) financialLabel.textContent = `Credit Limits & Balances (${currency})`;
-        if (titleEl) titleEl.textContent = 'Add Credit / Card Account';
-        if (subtitleEl) subtitleEl.textContent = 'Configure card limits, billing & dues';
+        if (titleEl) titleEl.textContent = isEditing ? 'Edit Credit / Card Account' : 'Add Credit / Card Account';
+        if (subtitleEl) subtitleEl.textContent = isEditing ? 'Update card limits, billing & dues' : 'Configure card limits, billing & dues';
         if (iconEl) iconEl.textContent = '💳';
         if (nameInput && !nameInput.value) nameInput.placeholder = 'e.g. ICICI Coral, Amazon ICICI, OneCard';
         if (creditLimitInput) creditLimitInput.required = true;
@@ -628,8 +669,8 @@ export class AccountsView {
         debitFields.style.display = 'block';
         creditFields.style.display = 'none';
         if (financialLabel) financialLabel.textContent = `Asset Balances (${currency})`;
-        if (titleEl) titleEl.textContent = 'Add Financial / Asset Account';
-        if (subtitleEl) subtitleEl.textContent = 'Bank accounts, savings, deposits & cash';
+        if (titleEl) titleEl.textContent = isEditing ? 'Edit Financial / Asset Account' : 'Add Financial / Asset Account';
+        if (subtitleEl) subtitleEl.textContent = isEditing ? 'Update bank accounts, savings, deposits & cash' : 'Bank accounts, savings, deposits & cash';
         if (iconEl) iconEl.textContent = '🏦';
         if (nameInput && !nameInput.value) nameInput.placeholder = 'e.g. HDFC Salary, SBI Savings, Cash in Hand';
         if (creditLimitInput) creditLimitInput.required = false;
@@ -642,8 +683,23 @@ export class AccountsView {
 
     if (prefill) {
       if (nameInput && prefill.name) nameInput.value = prefill.name;
-      if (prefill.category === 'credit' && creditLimitInput && prefill.creditLimit) {
-        creditLimitInput.value = prefill.creditLimit;
+      const institutionInput = form.querySelector('input[name="institution"]');
+      if (institutionInput && prefill.institution) institutionInput.value = prefill.institution;
+      const descInput = form.querySelector('input[name="description"]');
+      if (descInput && prefill.description) descInput.value = prefill.description;
+
+      if (prefill.category === 'credit') {
+        if (creditLimitInput && (prefill.creditLimit !== undefined && prefill.creditLimit !== null)) {
+          creditLimitInput.value = prefill.creditLimit;
+        }
+        const openOutInput = form.querySelector('input[name="openingOutstanding"]');
+        if (openOutInput && (prefill.openingOutstanding !== undefined && prefill.openingOutstanding !== null)) {
+          openOutInput.value = prefill.openingOutstanding;
+        }
+        const dueInput = form.querySelector('input[name="dueDate"]');
+        if (dueInput && prefill.dueDate) dueInput.value = prefill.dueDate;
+        const billingInput = form.querySelector('input[name="billingCycle"]');
+        if (billingInput && prefill.billingCycle) billingInput.value = prefill.billingCycle;
       }
       if (prefill.category === 'debit') {
         const openBalInput = form.querySelector('input[name="openingBalance"]');
@@ -687,11 +743,37 @@ export class AccountsView {
       const rawLimit = formData.get('creditLimit');
       const limitVal = isCredit ? (rawLimit !== null && rawLimit !== '' ? Number(rawLimit) : 0) : 0;
 
+      if (editAccountId) {
+        const updatePayload = {
+          name: (formData.get('name') || '').trim(),
+          category: isCredit ? 'credit' : 'debit',
+          type: selectedType,
+          openingBalance: isCredit ? 0 : (Number(formData.get('openingBalance')) || 0),
+          institution: formData.get('institution') || '',
+          creditLimit: limitVal,
+          openingOutstanding: isCredit ? (Number(formData.get('openingOutstanding')) || 0) : 0,
+          dueDate: formData.get('dueDate') || '',
+          billingCycle: formData.get('billingCycle') || '',
+          description: formData.get('description') || ''
+        };
+
+        await this.storage.updateAccount(editAccountId, updatePayload);
+        modalRoot.innerHTML = '';
+        if (this.activeTab !== 'all') {
+          this.activeTab = updatePayload.category;
+        }
+        this.render(document.getElementById('app-main-view'));
+        this.app.showToast(`Account "${updatePayload.name}" updated successfully!`);
+        this.app.updateHeaderSummary();
+        return;
+      }
+
       const newAccount = AccountModel.create({
         name: (formData.get('name') || '').trim(),
         category: isCredit ? 'credit' : 'debit',
         type: selectedType,
         openingBalance: isCredit ? 0 : (Number(formData.get('openingBalance')) || 0),
+        institution: formData.get('institution') || '',
         creditLimit: limitVal,
         openingOutstanding: isCredit ? (Number(formData.get('openingOutstanding')) || 0) : 0,
         dueDate: formData.get('dueDate') || '',
@@ -706,6 +788,7 @@ export class AccountsView {
       }
       this.render(document.getElementById('app-main-view'));
       this.app.showToast(`Account "${newAccount.name}" created!`);
+      this.app.updateHeaderSummary();
     });
   }
 }

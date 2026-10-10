@@ -189,6 +189,7 @@ export class TransactionsView {
                         ${tx.paymentMethod || 'Manual'}
                       </div>
                       <div class="tx-item-actions">
+                        <button class="btn-item-action edit-tx-btn" data-id="${tx.id}" title="Edit Record">✏️</button>
                         <button class="btn-item-action delete-tx-btn" data-id="${tx.id}" title="Delete Record">🗑</button>
                       </div>
                     </div>
@@ -310,6 +311,15 @@ export class TransactionsView {
         maxAmount: ''
       };
       this.render(container);
+    });
+
+    // Edit transaction
+    container.querySelectorAll('.edit-tx-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = e.currentTarget.dataset.id;
+        this.app.openTransactionModal({ editTxId: id });
+      });
     });
 
     // Delete transaction

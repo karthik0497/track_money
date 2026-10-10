@@ -204,12 +204,31 @@ export class SettingsView {
             <button class="btn btn-outline" id="settings-export-csv">
               📄 Export Transactions CSV
             </button>
-            <label class="btn btn-outline" style="cursor: pointer;">
+            <label class="btn btn-primary" style="cursor: pointer;">
               📂 Restore Backup from JSON
               <input type="file" id="input-restore-json" accept=".json" style="display: none;">
             </label>
-            <button class="btn btn-outline text-danger" id="btn-clear-all-data">
-              🗑️ Clear All Accounts & Transactions (Start Fresh)
+          </div>
+        </div>
+
+        <!-- Danger Zone: Reset All Data -->
+        <div class="card" style="margin-bottom: 1.5rem; border: 1.5px solid rgba(239, 68, 68, 0.35); background: rgba(239, 68, 68, 0.03);">
+          <div class="card-header">
+            <h4 style="color: var(--danger-color);">⚠️ Reset All Application Data</h4>
+            <span class="badge badge-danger">Danger Zone</span>
+          </div>
+          <p class="text-sm text-muted">
+            Completely clear all application data, including transactions, financial accounts, custom categories, recurring rules, settings, and audit logs.
+          </p>
+          <div class="alert-box" style="margin-top: 0.75rem; padding: 10px 14px; background: rgba(239, 68, 68, 0.1); border-radius: 8px; border-left: 3px solid var(--danger-color); font-size: 0.85rem; color: #fca5a5;">
+            <strong>Notice:</strong> This action permanently erases all in-app data on this browser. Any backup files (.json / .csv) already downloaded to your device will NOT be deleted. You can restore your data from a backup file at any time.
+          </div>
+          <div style="margin-top: 1rem; display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+            <button class="btn btn-danger btn-sm" id="btn-reset-all-data">
+              ⚠️ Reset All Data (Factory Reset)
+            </button>
+            <button class="btn btn-outline text-danger btn-sm" id="btn-clear-accounts-tx">
+              🗑️ Clear Accounts & Transactions Only
             </button>
           </div>
         </div>
@@ -435,9 +454,24 @@ export class SettingsView {
       reader.readAsText(file);
     });
 
-    // Clear All Accounts & Transactions
-    container.querySelector('#btn-clear-all-data')?.addEventListener('click', async () => {
-      if (confirm('Are you sure you want to delete all accounts and transactions to start completely fresh? Categories and profile settings will be kept.')) {
+    // Reset All Data (Complete Factory Reset)
+    container.querySelector('#btn-reset-all-data')?.addEventListener('click', async () => {
+      const confirmWarning = 
+        '⚠️ WARNING: ARE YOU SURE YOU WANT TO RESET ALL DATA?\n\n' +
+        '• This will completely delete ALL transactions, accounts, custom categories, recurring rules, settings, and logs from this browser.\n' +
+        '• Downloaded backup files (.json / .csv) on your computer/phone will NOT be affected.\n\n' +
+        'Click OK to confirm and permanently reset all application data.';
+      
+      if (confirm(confirmWarning)) {
+        await this.storage.resetAllData();
+        alert('All application data has been completely reset. The app will now reload with fresh defaults.');
+        window.location.reload();
+      }
+    });
+
+    // Clear Accounts & Transactions Only
+    container.querySelector('#btn-clear-accounts-tx')?.addEventListener('click', async () => {
+      if (confirm('Are you sure you want to delete all accounts and transactions to start completely fresh? Standard categories and profile settings will be kept.')) {
         await this.storage.clearAllAccountsAndTransactions();
         alert('All accounts and transactions have been cleared. Starting with a fresh empty ledger!');
         window.location.reload();
