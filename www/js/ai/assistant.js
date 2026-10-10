@@ -382,14 +382,20 @@ export class AssistantCoordinator {
       confirmationStatus: 'pending'
     });
 
+    const allAccounts = await this.storage.getAll('accounts');
+    const debitAccounts = allAccounts.filter(a => a.category !== 'credit');
+    const defaultDebit = debitAccounts[0];
+    const fromId = nluResult.fromAccount ? nluResult.fromAccount.id : (defaultDebit ? defaultDebit.id : null);
+    const fromName = nluResult.fromAccount ? nluResult.fromAccount.name : (defaultDebit ? defaultDebit.name : 'Bank Account');
+
     this.pendingAction = {
       type: 'awaiting_confirmation',
       actionType: 'credit_card_payment',
       auditId: audit.id,
       transactionData: {
-        accountId: nluResult.fromAccount ? nluResult.fromAccount.id : 'acc_hdfc_bank',
+        accountId: fromId,
         targetAccountId: nluResult.targetAccount.id,
-        fromAccountName: nluResult.fromAccount ? nluResult.fromAccount.name : 'HDFC Bank',
+        fromAccountName: fromName,
         targetAccountName: nluResult.targetAccount.name,
         type: 'credit_card_payment',
         amount: nluResult.amount,

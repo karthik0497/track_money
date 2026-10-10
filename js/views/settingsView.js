@@ -208,8 +208,8 @@ export class SettingsView {
               📂 Restore Backup from JSON
               <input type="file" id="input-restore-json" accept=".json" style="display: none;">
             </label>
-            <button class="btn btn-outline text-danger" id="btn-reset-db">
-              ⚠️ Reset to Default Seed Data
+            <button class="btn btn-outline text-danger" id="btn-clear-all-data">
+              🗑️ Clear All Accounts & Transactions (Start Fresh)
             </button>
           </div>
         </div>
@@ -435,10 +435,11 @@ export class SettingsView {
       reader.readAsText(file);
     });
 
-    // Reset DB
-    container.querySelector('#btn-reset-db')?.addEventListener('click', async () => {
-      if (confirm('Are you sure you want to reset all data to default? This cannot be undone.')) {
-        indexedDB.deleteDatabase('TrackMoneyDB');
+    // Clear All Accounts & Transactions
+    container.querySelector('#btn-clear-all-data')?.addEventListener('click', async () => {
+      if (confirm('Are you sure you want to delete all accounts and transactions to start completely fresh? Categories and profile settings will be kept.')) {
+        await this.storage.clearAllAccountsAndTransactions();
+        alert('All accounts and transactions have been cleared. Starting with a fresh empty ledger!');
         window.location.reload();
       }
     });

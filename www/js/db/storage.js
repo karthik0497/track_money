@@ -83,25 +83,77 @@ class StorageEngine {
   }
 
   async seedInitialDataIfEmpty() {
+    // 1. Purge any previously seeded dummy/sample accounts, transactions, or recurring schedules
+    const DEMO_ACCOUNT_IDS = ['acc_hdfc_bank', 'acc_sbi_savings', 'acc_demat', 'acc_cash', 'acc_hdfc_cc', 'acc_amazon_pay'];
+    const DEMO_TX_IDS = ['tx_001', 'tx_002', 'tx_003', 'tx_004', 'tx_005', 'tx_006', 'tx_007', 'tx_008', 'tx_009', 'tx_010'];
+    const DEMO_REC_IDS = ['rec_salary', 'rec_rent', 'rec_netflix', 'rec_sip'];
+
+    let purgedDemo = false;
+    for (const accId of DEMO_ACCOUNT_IDS) {
+      const acc = await this.get(STORES.ACCOUNTS, accId);
+      if (acc) {
+        await this.delete(STORES.ACCOUNTS, accId);
+        purgedDemo = true;
+      }
+    }
+    for (const txId of DEMO_TX_IDS) {
+      const tx = await this.get(STORES.TRANSACTIONS, txId);
+      if (tx) {
+        await this.delete(STORES.TRANSACTIONS, txId);
+        purgedDemo = true;
+      }
+    }
+    for (const recId of DEMO_REC_IDS) {
+      const rec = await this.get(STORES.RECURRING, recId);
+      if (rec) {
+        await this.delete(STORES.RECURRING, recId);
+        purgedDemo = true;
+      }
+    }
+
+    if (purgedDemo && typeof localStorage !== 'undefined') {
+      const rawSnapshot = localStorage.getItem('tm_backup_snapshot');
+      if (rawSnapshot) {
+        try {
+          const snapshot = JSON.parse(rawSnapshot);
+          if (snapshot.accounts) {
+            snapshot.accounts = snapshot.accounts.filter(a => !DEMO_ACCOUNT_IDS.includes(a.id));
+          }
+          if (snapshot.transactions) {
+            snapshot.transactions = snapshot.transactions.filter(t => !DEMO_TX_IDS.includes(t.id));
+          }
+          if (snapshot.recurring) {
+            snapshot.recurring = snapshot.recurring.filter(r => !DEMO_REC_IDS.includes(r.id));
+          }
+          localStorage.setItem('tm_backup_snapshot', JSON.stringify(snapshot));
+        } catch (e) {
+          localStorage.removeItem('tm_backup_snapshot');
+        }
+      }
+    }
+
     let existingAccounts = await this.getAll(STORES.ACCOUNTS);
 
-    // If IndexedDB accounts are completely empty, check if an emergency local backup exists
+    // If IndexedDB accounts are completely empty, check if a valid user backup snapshot exists
     if (existingAccounts.length === 0) {
       const emergencySnapshot = typeof localStorage !== 'undefined' ? localStorage.getItem('tm_backup_snapshot') : null;
       if (emergencySnapshot) {
         try {
           const snapshotData = JSON.parse(emergencySnapshot);
-          if (snapshotData && snapshotData.accounts && snapshotData.accounts.length > 0) {
-            console.log('Track-Money: Restoring from emergency local backup snapshot...');
-            for (const acc of snapshotData.accounts) await this.put(STORES.ACCOUNTS, acc);
+          const userAccounts = (snapshotData?.accounts || []).filter(a => !DEMO_ACCOUNT_IDS.includes(a.id));
+          if (userAccounts.length > 0) {
+            console.log('Track-Money: Restoring user accounts from emergency local backup snapshot...');
+            for (const acc of userAccounts) await this.put(STORES.ACCOUNTS, acc);
             if (snapshotData.transactions) {
-              for (const tx of snapshotData.transactions) await this.put(STORES.TRANSACTIONS, tx);
+              const userTxs = snapshotData.transactions.filter(t => !DEMO_TX_IDS.includes(t.id));
+              for (const tx of userTxs) await this.put(STORES.TRANSACTIONS, tx);
             }
             if (snapshotData.categories) {
               for (const cat of snapshotData.categories) await this.put(STORES.CATEGORIES, cat);
             }
             if (snapshotData.recurring) {
-              for (const rec of snapshotData.recurring) await this.put(STORES.RECURRING, rec);
+              const userRecs = snapshotData.recurring.filter(r => !DEMO_REC_IDS.includes(r.id));
+              for (const rec of userRecs) await this.put(STORES.RECURRING, rec);
             }
             if (snapshotData.settings) {
               for (const s of snapshotData.settings) await this.put(STORES.SETTINGS, s);
@@ -114,7 +166,7 @@ class StorageEngine {
       }
     }
 
-    if (existingAccounts.length === 0) {
+    if (existingAccounts.length === 0 && DEFAULT_ACCOUNTS.length > 0) {
       console.log('Seeding initial Track-Money accounts...');
       for (const acc of DEFAULT_ACCOUNTS) {
         await this.put(STORES.ACCOUNTS, acc);
@@ -138,7 +190,7 @@ class StorageEngine {
     }
 
     const existingTx = await this.getAll(STORES.TRANSACTIONS);
-    if (existingTx.length === 0) {
+    if (existingTx.length === 0 && DEFAULT_TRANSACTIONS.length > 0) {
       console.log('Seeding initial Track-Money transactions...');
       for (const tx of DEFAULT_TRANSACTIONS) {
         await this.put(STORES.TRANSACTIONS, tx);
@@ -146,7 +198,7 @@ class StorageEngine {
     }
 
     const existingRec = await this.getAll(STORES.RECURRING);
-    if (existingRec.length === 0) {
+    if (existingRec.length === 0 && DEFAULT_RECURRING.length > 0) {
       console.log('Seeding initial Track-Money recurring schedules...');
       for (const rec of DEFAULT_RECURRING) {
         await this.put(STORES.RECURRING, rec);
@@ -296,6 +348,17 @@ class StorageEngine {
       req.onsuccess = () => resolve(true);
       req.onerror = () => reject(req.error);
     });
+  }
+
+  async clearAllAccountsAndTransactions() {
+    if (!this.db) await this.readyPromise;
+    await this.clear(STORES.ACCOUNTS);
+    await this.clear(STORES.TRANSACTIONS);
+    await this.clear(STORES.RECURRING);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('tm_backup_snapshot');
+    }
+    return true;
   }
 
   // Account Operations & Dynamic Balance Calculations

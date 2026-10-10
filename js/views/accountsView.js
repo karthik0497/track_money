@@ -69,8 +69,26 @@ export class AccountsView {
           </div>
         </div>
 
+        ${(debitAccounts.length === 0 && creditAccounts.length === 0) ? `
+          <div class="card empty-accounts-card" style="text-align: center; padding: 2.75rem 1.5rem; margin: 1.5rem 0; border: 1.5px dashed var(--border-color); background: var(--surface-bg);">
+            <div style="font-size: 3rem; margin-bottom: 0.75rem;">🏦</div>
+            <h3 style="margin-bottom: 0.5rem;">No Accounts Created Yet</h3>
+            <p class="text-sm text-muted" style="max-width: 440px; margin: 0 auto 1.5rem; line-height: 1.5;">
+              Your account ledger is completely empty and ready. Add your bank accounts, savings, cash in hand, or credit cards to start recording transactions freshly.
+            </p>
+            <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+              <button class="btn btn-primary" id="empty-btn-add-debit">
+                ➕ Add Bank / Cash Account
+              </button>
+              <button class="btn btn-secondary" id="empty-btn-add-credit">
+                💳 Add Credit Card / Loan
+              </button>
+            </div>
+          </div>
+        ` : ''}
+
         <!-- SECTION A: Debit / Asset Accounts -->
-        ${(this.activeTab === 'all' || this.activeTab === 'debit') ? `
+        ${(this.activeTab === 'all' || this.activeTab === 'debit') && debitAccounts.length > 0 ? `
           <div class="account-section">
             <div class="section-title">
               <div class="title-with-icon">
@@ -131,7 +149,7 @@ export class AccountsView {
         ` : ''}
 
         <!-- SECTION B: Credit / Liability Accounts -->
-        ${(this.activeTab === 'all' || this.activeTab === 'credit') ? `
+        ${(this.activeTab === 'all' || this.activeTab === 'credit') && creditAccounts.length > 0 ? `
           <div class="account-section" style="margin-top: 2rem;">
             <div class="section-title">
               <div class="title-with-icon">
@@ -398,6 +416,14 @@ export class AccountsView {
     // Add Account
     container.querySelector('#btn-add-account')?.addEventListener('click', () => {
       this.openAddAccountModal(this.activeTab === 'credit' ? 'credit' : 'debit');
+    });
+
+    container.querySelector('#empty-btn-add-debit')?.addEventListener('click', () => {
+      this.openAddAccountModal('debit');
+    });
+
+    container.querySelector('#empty-btn-add-credit')?.addEventListener('click', () => {
+      this.openAddAccountModal('credit');
     });
 
     // View details

@@ -210,35 +210,46 @@ export class DashboardView {
               <button class="btn btn-text text-sm" id="view-all-accounts">View All →</button>
             </div>
             <div class="mini-accounts-list">
-              ${metrics.debitAccounts.slice(0, 3).map(acc => `
-                <div class="mini-account-row">
-                  <div class="acc-badge" style="background: ${acc.color}20; color: ${acc.color};">
-                    ${acc.icon || '🏦'}
-                  </div>
-                  <div class="acc-text">
-                    <div class="font-bold">${acc.name}</div>
-                    <div class="text-xs text-muted">${acc.type}</div>
-                  </div>
-                  <div class="acc-bal text-success font-bold">
-                    ${AccountModel.formatCurrency(acc.currentBalance)}
-                  </div>
+              ${(metrics.debitAccounts.length === 0 && metrics.creditAccounts.length === 0) ? `
+                <div class="empty-placeholder" style="padding: 1.5rem 0.75rem; text-align: center;">
+                  <div style="font-size: 1.8rem; margin-bottom: 0.35rem;">🏦</div>
+                  <div class="font-bold text-xs" style="margin-bottom: 0.25rem;">No accounts created yet</div>
+                  <div class="text-xs text-muted" style="margin-bottom: 0.75rem;">Create an account to start tracking balances.</div>
+                  <button class="btn btn-primary btn-xs" id="dash-btn-add-account-empty">
+                    ➕ Create First Account
+                  </button>
                 </div>
-              `).join('')}
+              ` : `
+                ${metrics.debitAccounts.slice(0, 3).map(acc => `
+                  <div class="mini-account-row">
+                    <div class="acc-badge" style="background: ${acc.color}20; color: ${acc.color};">
+                      ${acc.icon || '🏦'}
+                    </div>
+                    <div class="acc-text">
+                      <div class="font-bold">${acc.name}</div>
+                      <div class="text-xs text-muted">${acc.type}</div>
+                    </div>
+                    <div class="acc-bal text-success font-bold">
+                      ${AccountModel.formatCurrency(acc.currentBalance)}
+                    </div>
+                  </div>
+                `).join('')}
 
-              ${metrics.creditAccounts.slice(0, 2).map(acc => `
-                <div class="mini-account-row">
-                  <div class="acc-badge" style="background: ${acc.color}20; color: ${acc.color};">
-                    ${acc.icon || '💳'}
+                ${metrics.creditAccounts.slice(0, 2).map(acc => `
+                  <div class="mini-account-row">
+                    <div class="acc-badge" style="background: ${acc.color}20; color: ${acc.color};">
+                      ${acc.icon || '💳'}
+                    </div>
+                    <div class="acc-text">
+                      <div class="font-bold">${acc.name}</div>
+                      <div class="text-xs text-muted">Outstanding</div>
+                    </div>
+                    <div class="acc-bal text-danger font-bold">
+                      ${AccountModel.formatCurrency(acc.currentOutstanding)}
+                    </div>
                   </div>
-                  <div class="acc-text">
-                    <div class="font-bold">${acc.name}</div>
-                    <div class="text-xs text-muted">Outstanding</div>
-                  </div>
-                  <div class="acc-bal text-danger font-bold">
-                    ${AccountModel.formatCurrency(acc.currentOutstanding)}
-                  </div>
-                </div>
-              `).join('')}
+                `).join('')}
+              `}
             </div>
           </div>
         </div>
@@ -366,6 +377,10 @@ export class DashboardView {
 
     container.querySelector('#dash-btn-transfer')?.addEventListener('click', () => {
       this.app.openTransferModal();
+    });
+
+    container.querySelector('#dash-btn-add-account-empty')?.addEventListener('click', () => {
+      this.app.openAddAccountModal();
     });
 
     container.querySelector('#dash-btn-voice-ai')?.addEventListener('click', () => {
