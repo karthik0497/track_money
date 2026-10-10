@@ -9,7 +9,7 @@ class StorageEngine {
   }
 
   async init() {
-    return new Promise((resolve, reject) => {
+    await new Promise((resolve, reject) => {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
 
       request.onupgradeneeded = (event) => {
@@ -68,12 +68,52 @@ class StorageEngine {
       };
     });
 
+    // Request persistent storage from browser (prevents mobile/desktop OS cache purge)
+    if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.persist) {
+      try {
+        navigator.storage.persist().then(persistent => {
+          if (persistent) console.log('Track-Money: IndexedDB persistent storage granted.');
+        }).catch(() => {});
+      } catch (e) {}
+    }
+
     await this.seedInitialDataIfEmpty();
+    await this.saveLocalEmergencySnapshot();
     return this.db;
   }
 
   async seedInitialDataIfEmpty() {
-    const existingAccounts = await this.getAll(STORES.ACCOUNTS);
+    let existingAccounts = await this.getAll(STORES.ACCOUNTS);
+
+    // If IndexedDB accounts are completely empty, check if an emergency local backup exists
+    if (existingAccounts.length === 0) {
+      const emergencySnapshot = typeof localStorage !== 'undefined' ? localStorage.getItem('tm_backup_snapshot') : null;
+      if (emergencySnapshot) {
+        try {
+          const snapshotData = JSON.parse(emergencySnapshot);
+          if (snapshotData && snapshotData.accounts && snapshotData.accounts.length > 0) {
+            console.log('Track-Money: Restoring from emergency local backup snapshot...');
+            for (const acc of snapshotData.accounts) await this.put(STORES.ACCOUNTS, acc);
+            if (snapshotData.transactions) {
+              for (const tx of snapshotData.transactions) await this.put(STORES.TRANSACTIONS, tx);
+            }
+            if (snapshotData.categories) {
+              for (const cat of snapshotData.categories) await this.put(STORES.CATEGORIES, cat);
+            }
+            if (snapshotData.recurring) {
+              for (const rec of snapshotData.recurring) await this.put(STORES.RECURRING, rec);
+            }
+            if (snapshotData.settings) {
+              for (const s of snapshotData.settings) await this.put(STORES.SETTINGS, s);
+            }
+            existingAccounts = await this.getAll(STORES.ACCOUNTS);
+          }
+        } catch (e) {
+          console.warn('Track-Money: Could not restore emergency snapshot:', e);
+        }
+      }
+    }
+
     if (existingAccounts.length === 0) {
       console.log('Seeding initial Track-Money accounts...');
       for (const acc of DEFAULT_ACCOUNTS) {
@@ -86,6 +126,14 @@ class StorageEngine {
       console.log('Seeding initial Track-Money categories...');
       for (const cat of DEFAULT_CATEGORIES) {
         await this.put(STORES.CATEGORIES, cat);
+      }
+    } else {
+      // Auto-merge newly added default categories into existing database
+      const existingNames = new Set(existingCategories.map(c => (c.name || '').toLowerCase()));
+      for (const cat of DEFAULT_CATEGORIES) {
+        if (!existingNames.has((cat.name || '').toLowerCase())) {
+          await this.put(STORES.CATEGORIES, cat);
+        }
       }
     }
 
@@ -117,6 +165,30 @@ class StorageEngine {
         pinCode: null,
         createdDate: new Date().toISOString()
       });
+    }
+  }
+
+  async saveLocalEmergencySnapshot() {
+    if (typeof localStorage === 'undefined') return;
+    try {
+      const accounts = await this.getAll(STORES.ACCOUNTS);
+      const transactions = await this.getAll(STORES.TRANSACTIONS);
+      const categories = await this.getAll(STORES.CATEGORIES);
+      const recurring = await this.getAll(STORES.RECURRING);
+      const settings = await this.getAll(STORES.SETTINGS);
+      if (accounts.length > 0 || transactions.length > 0) {
+        const snapshot = {
+          timestamp: new Date().toISOString(),
+          accounts,
+          transactions,
+          categories,
+          recurring,
+          settings
+        };
+        localStorage.setItem('tm_backup_snapshot', JSON.stringify(snapshot));
+      }
+    } catch (e) {
+      console.warn('Could not save local emergency snapshot:', e);
     }
   }
 
@@ -184,24 +256,35 @@ class StorageEngine {
 
   async put(storeName, value) {
     if (!this.db) await this.readyPromise;
-    return new Promise((resolve, reject) => {
+    const res = await new Promise((resolve, reject) => {
       const tx = this.db.transaction(storeName, 'readwrite');
       const store = tx.objectStore(storeName);
       const req = store.put(value);
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
     });
+    this.scheduleEmergencySnapshot();
+    return res;
   }
 
   async delete(storeName, key) {
     if (!this.db) await this.readyPromise;
-    return new Promise((resolve, reject) => {
+    const res = await new Promise((resolve, reject) => {
       const tx = this.db.transaction(storeName, 'readwrite');
       const store = tx.objectStore(storeName);
       const req = store.delete(key);
       req.onsuccess = () => resolve(true);
       req.onerror = () => reject(req.error);
     });
+    this.scheduleEmergencySnapshot();
+    return res;
+  }
+
+  scheduleEmergencySnapshot() {
+    if (this._snapshotTimer) clearTimeout(this._snapshotTimer);
+    this._snapshotTimer = setTimeout(() => {
+      this.saveLocalEmergencySnapshot();
+    }, 800);
   }
 
   async clear(storeName) {
@@ -517,27 +600,164 @@ class StorageEngine {
 
   async importData(jsonData) {
     if (!jsonData || !jsonData.accounts || !jsonData.transactions) {
-      throw new Error('Invalid Track-Money backup JSON file format.');
+      throw new Error('Invalid Track-Money backup JSON file format: Missing accounts or transactions array.');
     }
 
-    // Clear and restore
+    // Clear existing records before restore
     await this.clear(STORES.ACCOUNTS);
     await this.clear(STORES.TRANSACTIONS);
     await this.clear(STORES.CATEGORIES);
     await this.clear(STORES.RECURRING);
+    if (jsonData.aiAuditLogs) {
+      await this.clear(STORES.AI_AUDIT);
+    }
 
+    // Restore primary entities
     for (const item of jsonData.accounts) await this.put(STORES.ACCOUNTS, item);
     for (const item of jsonData.transactions) await this.put(STORES.TRANSACTIONS, item);
-    if (jsonData.categories) {
+
+    if (jsonData.categories && Array.isArray(jsonData.categories) && jsonData.categories.length > 0) {
       for (const item of jsonData.categories) await this.put(STORES.CATEGORIES, item);
     }
-    if (jsonData.recurring) {
+
+    // Auto-merge any missing default categories (ensuring new categories are never lost)
+    const currentCategories = await this.getAll(STORES.CATEGORIES);
+    const existingNames = new Set(currentCategories.map(c => (c.name || '').toLowerCase()));
+    for (const cat of DEFAULT_CATEGORIES) {
+      if (!existingNames.has((cat.name || '').toLowerCase())) {
+        await this.put(STORES.CATEGORIES, cat);
+      }
+    }
+
+    if (jsonData.recurring && Array.isArray(jsonData.recurring)) {
       for (const item of jsonData.recurring) await this.put(STORES.RECURRING, item);
     }
-    if (jsonData.settings) {
-      for (const item of jsonData.settings) await this.put(STORES.SETTINGS, item);
+    if (jsonData.aiAuditLogs && Array.isArray(jsonData.aiAuditLogs)) {
+      for (const item of jsonData.aiAuditLogs) await this.put(STORES.AI_AUDIT, item);
     }
+    if (jsonData.settings && Array.isArray(jsonData.settings)) {
+      for (const item of jsonData.settings) {
+        await this.put(STORES.SETTINGS, item);
+        if (item.key === 'profile') {
+          if (item.currency) localStorage.setItem('tm_currency', item.currency);
+          if (item.loginId) localStorage.setItem('tm_login_id', item.loginId);
+        }
+      }
+    }
+
+    await this.saveLocalEmergencySnapshot();
     return true;
+  }
+
+  // Monthly Financial Analytics & Categorical Aggregations
+  async getMonthlyReport(year, month) {
+    if (!this.db) await this.readyPromise;
+    const transactions = await this.getAll(STORES.TRANSACTIONS);
+    const categories = await this.getAll(STORES.CATEGORIES);
+    const accounts = await this.getAll(STORES.ACCOUNTS);
+
+    const catMap = new Map(categories.map(c => [(c.name || '').toLowerCase(), c]));
+    const accMap = new Map(accounts.map(a => [a.id, a]));
+
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+
+    let monthlyIncome = 0;
+    let monthlyExpense = 0;
+    let transferCount = 0;
+    const categoryTotals = {};
+    const categoryTxList = {};
+    const monthTransactions = [];
+
+    transactions.forEach(tx => {
+      const txDate = new Date(tx.date || tx.createdTimestamp);
+      const txYear = txDate.getFullYear();
+      const txMonth = txDate.getMonth();
+
+      if (txYear === year && txMonth === month) {
+        const enrichedTx = {
+          ...tx,
+          accountName: accMap.get(tx.accountId)?.name || 'Unknown Account',
+          targetAccountName: tx.targetAccountId ? accMap.get(tx.targetAccountId)?.name : null
+        };
+        monthTransactions.push(enrichedTx);
+
+        const amt = Number(tx.amount) || 0;
+        if (tx.type === 'income') {
+          monthlyIncome += amt;
+        } else if (tx.type === 'expense') {
+          monthlyExpense += amt;
+          const catName = tx.category || 'Other Expense';
+          categoryTotals[catName] = (categoryTotals[catName] || 0) + amt;
+          if (!categoryTxList[catName]) categoryTxList[catName] = [];
+          categoryTxList[catName].push(enrichedTx);
+        } else if (tx.type === 'transfer') {
+          transferCount++;
+        }
+      }
+    });
+
+    const netSavings = monthlyIncome - monthlyExpense;
+    const savingsRate = monthlyIncome > 0
+      ? ((netSavings / monthlyIncome) * 100).toFixed(1)
+      : (monthlyExpense > 0 ? -100 : 0);
+
+    // Build Category Breakdown with percentage and color tokens
+    const categoryBreakdown = Object.entries(categoryTotals)
+      .map(([name, amount]) => {
+        const catInfo = catMap.get(name.toLowerCase());
+        const pct = monthlyExpense > 0 ? ((amount / monthlyExpense) * 100).toFixed(1) : 0;
+        return {
+          name,
+          amount,
+          percentage: Number(pct),
+          count: categoryTxList[name]?.length || 0,
+          icon: catInfo?.icon || '🏷️',
+          color: catInfo?.color || '#6366f1',
+          transactions: categoryTxList[name] || []
+        };
+      })
+      .sort((a, b) => b.amount - a.amount);
+
+    monthTransactions.sort((a, b) => new Date(b.date || b.createdTimestamp) - new Date(a.date || a.createdTimestamp));
+
+    return {
+      year,
+      month,
+      monthName: monthNames[month],
+      income: monthlyIncome,
+      expense: monthlyExpense,
+      savings: netSavings,
+      savingsRate: Number(savingsRate),
+      categoryBreakdown,
+      transactions: monthTransactions,
+      txCount: monthTransactions.length,
+      transferCount
+    };
+  }
+
+  async getAvailableReportPeriods() {
+    if (!this.db) await this.readyPromise;
+    const transactions = await this.getAll(STORES.TRANSACTIONS);
+    const periods = new Set();
+    const now = new Date();
+    periods.add(`${now.getFullYear()}-${now.getMonth()}`);
+    const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    periods.add(`${prevMonth.getFullYear()}-${prevMonth.getMonth()}`);
+
+    transactions.forEach(tx => {
+      const d = new Date(tx.date || tx.createdTimestamp);
+      if (!isNaN(d.getTime())) {
+        periods.add(`${d.getFullYear()}-${d.getMonth()}`);
+      }
+    });
+
+    return Array.from(periods).map(p => {
+      const [year, month] = p.split('-').map(Number);
+      return { year, month };
+    }).sort((a, b) => (b.year * 12 + b.month) - (a.year * 12 + a.month));
   }
 }
 

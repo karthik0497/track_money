@@ -1,11 +1,10 @@
 {
   "name": "track-money",
   "version": "1.0.0",
-  "description": "AI-Powered Personal Finance App for Android with Embedded Local DB",
+  "description": "AI-Powered Personal Finance & Expense Manager — Installable Progressive Hybrid Web App with Local Offline Database",
   "scripts": {
     "dev": "node server.js",
-    "build": "mkdir -p www && cp -rf index.html manifest.json sw.js icons css js www",
-    "build:apk": "bash build-apk.sh"
+    "build": "mkdir -p www && cp -rf index.html manifest.json sw.js icons css js www"
   },
   "keywords": [
     "finance",

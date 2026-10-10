@@ -105,8 +105,6 @@ export class RecurringView {
             </div>
           `}
         </div>
-
-        <div id="recurring-modal-root"></div>
       </div>
     `;
 
@@ -161,7 +159,7 @@ export class RecurringView {
   }
 
   async openAddRecurringModal() {
-    const modalRoot = document.getElementById('recurring-modal-root');
+    const modalRoot = document.getElementById('global-modal-root') || document.body;
     if (!modalRoot) return;
 
     const accounts = await this.storage.getAll('accounts');

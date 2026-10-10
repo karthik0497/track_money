@@ -69,6 +69,9 @@ export class AssistantView {
           <!-- Suggested Prompts Strip -->
           <div class="ai-suggestions-carousel">
             <span class="text-xs text-muted" style="margin-right: 6px; align-self: center;">Try:</span>
+            <button class="ai-chip" data-prompt="Create account Bank Saving Account 6599">"Create account Bank Saving Account 6599"</button>
+            <button class="ai-chip" data-prompt="Add credit card ICICI Coral limit 50000">"Add credit card ICICI Coral limit 50k"</button>
+            <button class="ai-chip" data-prompt="Create account Cash 2000">"Create account Cash 2000"</button>
             <button class="ai-chip" data-prompt="I spent ₹500 for lunch from HDFC bank">"Spent ₹500 for lunch from HDFC"</button>
             <button class="ai-chip" data-prompt="Yesterday I spent 800 on petrol using my SBI account">"Yesterday 800 petrol SBI"</button>
             <button class="ai-chip" data-prompt="Add 25,000 salary to HDFC">"Add 25,000 salary to HDFC"</button>
@@ -127,6 +130,8 @@ export class AssistantView {
             You can type or speak financial commands naturally. For example:
           </p>
           <ul class="text-xs" style="margin-top: 4px; padding-left: 1.2rem; color: #94a3b8;">
+            <li><em>"Create account Bank Saving Account 6599"</em></li>
+            <li><em>"Add credit card ICICI Coral limit 50,000"</em></li>
             <li><em>"I spent ₹500 for lunch from HDFC bank"</em></li>
             <li><em>"Paid 5,000 towards my HDFC credit card"</em></li>
             <li><em>"Transfer 10,000 from HDFC to SBI"</em></li>
@@ -266,60 +271,86 @@ export class AssistantView {
 
     if (msg.type === 'confirmation_card') {
       const data = msg.data;
+      const isAccount = data.isAccount || data.actionType === 'create_account';
       const isTransfer = data.type === 'transfer';
       const isCC = data.type === 'credit_card_payment';
 
       contentHtml = `
         <div class="msg-bubble confirmation-bubble fade-in">
           <div class="confirm-card-header">
-            <span class="confirm-badge">SAFETY CHECK</span>
-            <strong>Please Confirm Transaction</strong>
+            <span class="confirm-badge" style="${isAccount ? 'background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.3);' : ''}">
+              ${isAccount ? 'NEW ACCOUNT' : 'SAFETY CHECK'}
+            </span>
+            <strong>${isAccount ? 'Please Confirm New Account' : 'Please Confirm Transaction'}</strong>
           </div>
 
           <div class="confirm-card-body">
-            <div class="confirm-row">
-              <span class="text-muted">Type:</span>
-              <span class="font-bold text-uppercase">${data.type}</span>
-            </div>
-            <div class="confirm-row">
-              <span class="text-muted">Amount:</span>
-              <span class="font-bold text-xl text-primary">${AccountModel.formatCurrency(data.amount)}</span>
-            </div>
-            ${isTransfer ? `
+            ${isAccount ? `
               <div class="confirm-row">
-                <span class="text-muted">From:</span>
-                <span class="font-bold">${data.fromAccountName}</span>
-              </div>
-              <div class="confirm-row">
-                <span class="text-muted">To:</span>
-                <span class="font-bold">${data.toAccountName}</span>
-              </div>
-            ` : isCC ? `
-              <div class="confirm-row">
-                <span class="text-muted">From Bank:</span>
-                <span class="font-bold">${data.fromAccountName}</span>
-              </div>
-              <div class="confirm-row">
-                <span class="text-muted">To Card:</span>
-                <span class="font-bold text-warning">${data.targetAccountName}</span>
-              </div>
-            ` : `
-              <div class="confirm-row">
-                <span class="text-muted">Account:</span>
-                <span class="font-bold">${data.accountName}</span>
+                <span class="text-muted">Account Name:</span>
+                <span class="font-bold text-lg">${this.escapeHtml(data.name)}</span>
               </div>
               <div class="confirm-row">
                 <span class="text-muted">Category:</span>
-                <span>${data.category} ${data.subcategory ? '• ' + data.subcategory : ''}</span>
+                <span class="badge ${data.category === 'credit' ? 'badge-danger' : 'badge-primary'}">
+                  ${data.category === 'credit' ? '💳 Credit / Card' : '🏦 Debit / Asset'}
+                </span>
               </div>
               <div class="confirm-row">
-                <span class="text-muted">Description:</span>
-                <span>${data.description}</span>
+                <span class="text-muted">Account Type:</span>
+                <span class="font-bold">${this.escapeHtml(data.type)}</span>
               </div>
               <div class="confirm-row">
-                <span class="text-muted">Date:</span>
-                <span>${TransactionModel.formatDate(data.date)}</span>
+                <span class="text-muted">${data.category === 'credit' ? 'Credit Limit:' : 'Opening Balance:'}</span>
+                <span class="font-bold text-xl ${data.category === 'credit' ? 'text-warning' : 'text-primary'}">
+                  ${AccountModel.formatCurrency(data.category === 'credit' ? data.creditLimit : data.openingBalance)}
+                </span>
               </div>
+            ` : `
+              <div class="confirm-row">
+                <span class="text-muted">Type:</span>
+                <span class="font-bold text-uppercase">${data.type}</span>
+              </div>
+              <div class="confirm-row">
+                <span class="text-muted">Amount:</span>
+                <span class="font-bold text-xl text-primary">${AccountModel.formatCurrency(data.amount)}</span>
+              </div>
+              ${isTransfer ? `
+                <div class="confirm-row">
+                  <span class="text-muted">From:</span>
+                  <span class="font-bold">${data.fromAccountName}</span>
+                </div>
+                <div class="confirm-row">
+                  <span class="text-muted">To:</span>
+                  <span class="font-bold">${data.toAccountName}</span>
+                </div>
+              ` : isCC ? `
+                <div class="confirm-row">
+                  <span class="text-muted">From Bank:</span>
+                  <span class="font-bold">${data.fromAccountName}</span>
+                </div>
+                <div class="confirm-row">
+                  <span class="text-muted">To Card:</span>
+                  <span class="font-bold text-warning">${data.targetAccountName}</span>
+                </div>
+              ` : `
+                <div class="confirm-row">
+                  <span class="text-muted">Account:</span>
+                  <span class="font-bold">${data.accountName}</span>
+                </div>
+                <div class="confirm-row">
+                  <span class="text-muted">Category:</span>
+                  <span>${data.category} ${data.subcategory ? '• ' + data.subcategory : ''}</span>
+                </div>
+                <div class="confirm-row">
+                  <span class="text-muted">Description:</span>
+                  <span>${data.description}</span>
+                </div>
+                <div class="confirm-row">
+                  <span class="text-muted">Date:</span>
+                  <span>${TransactionModel.formatDate(data.date)}</span>
+                </div>
+              `}
             `}
 
             ${msg.suggestedNewCategory ? `
@@ -331,7 +362,7 @@ export class AssistantView {
 
           <div class="confirm-actions">
             <button class="btn btn-sm btn-primary confirm-action-btn" id="ai-confirm-yes">
-              ✓ Confirm & Save
+              ${isAccount ? '✓ Create Account' : '✓ Confirm & Save'}
             </button>
             <button class="btn btn-sm btn-outline confirm-edit-btn" id="ai-confirm-edit">
               ✏ Edit
@@ -408,21 +439,32 @@ export class AssistantView {
 
     if (editBtn) {
       editBtn.addEventListener('click', () => {
-        const txData = this.coordinator.pendingAction?.transactionData;
-        this.coordinator.cancelPendingAction();
-        this.close();
-        if (txData) {
-          this.app.openTransactionModal({ prefill: txData });
+        const isAcc = this.coordinator.pendingAction?.actionType === 'create_account';
+        if (isAcc) {
+          const accData = this.coordinator.pendingAction.accountData;
+          this.coordinator.cancelPendingAction();
+          this.close();
+          if (this.app.openAddAccountModal) {
+            this.app.openAddAccountModal(accData.category, accData);
+          }
+        } else {
+          const txData = this.coordinator.pendingAction?.transactionData;
+          this.coordinator.cancelPendingAction();
+          this.close();
+          if (txData) {
+            this.app.openTransactionModal({ prefill: txData });
+          }
         }
       });
     }
 
     if (cancelBtn) {
       cancelBtn.addEventListener('click', () => {
+        const isAcc = this.coordinator.pendingAction?.actionType === 'create_account';
         this.coordinator.cancelPendingAction();
         this.renderAiMessage({
           sender: 'ai',
-          text: '❌ Transaction cancelled.',
+          text: isAcc ? '❌ Account creation cancelled.' : '❌ Transaction cancelled.',
           type: 'text'
         });
         msgContainer.scrollTop = msgContainer.scrollHeight;

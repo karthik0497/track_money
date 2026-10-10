@@ -35,6 +35,11 @@ export class AssistantCoordinator {
     // Parse input using NLU engine
     const nluResult = NLUEngine.parse(text, accounts, categories);
 
+    // 0. Create Account Intent
+    if (nluResult.intent === 'create_account') {
+      return await this.prepareAccountConfirmation(nluResult, text);
+    }
+
     // 1. Query Intent: Answer questions from DB
     if (nluResult.intent === 'query_finance') {
       const answer = await FinancialQueryEngine.answer(text, this.storage);
@@ -113,7 +118,7 @@ export class AssistantCoordinator {
     // Fallback response
     const fallbackMsg = {
       sender: 'ai',
-      text: "I didn't quite catch that. You can tell me things like:\n• *\"Spent 500 on lunch from HDFC\"*\n• *\"Paid 10,000 towards my credit card\"*\n• *\"What is my HDFC balance?\"*",
+      text: "I didn't quite catch that. You can tell me things like:\n• *\"Create account Bank Saving Account 6599\"*\n• *\"Spent 500 on lunch from HDFC\"*\n• *\"Paid 10,000 towards my credit card\"*\n• *\"What is my HDFC balance?\"*",
       type: 'text',
       timestamp: Date.now()
     };
@@ -126,13 +131,14 @@ export class AssistantCoordinator {
 
     // Check if user confirmed or rejected
     if (this.pendingAction && this.pendingAction.type === 'awaiting_confirmation') {
-      if (['yes', 'confirm', 'yup', 'correct', 'ok', 'save', 'add', 'sure'].includes(clean)) {
+      if (['yes', 'confirm', 'yup', 'correct', 'ok', 'save', 'add', 'sure', 'create'].includes(clean)) {
         return await this.executeConfirmedAction();
       }
       if (['no', 'cancel', 'stop', 'edit', 'change', 'nevermind'].includes(clean)) {
+        const isAcc = this.pendingAction.actionType === 'create_account';
         const cancelledMsg = {
           sender: 'ai',
-          text: "❌ Transaction cancelled. No changes were made.",
+          text: isAcc ? "❌ Account creation cancelled. No account was added." : "❌ Transaction cancelled. No changes were made.",
           type: 'text',
           timestamp: Date.now()
         };
@@ -218,6 +224,57 @@ export class AssistantCoordinator {
     };
     this.conversationHistory.push(msg);
     return msg;
+  }
+
+  async prepareAccountConfirmation(nluResult, rawUtterance) {
+    const isCredit = nluResult.isCredit;
+    const audit = await this.storage.logAiAudit({
+      originalMessage: rawUtterance,
+      interpretedAction: {
+        action: 'create_account',
+        name: nluResult.name,
+        category: nluResult.accountCategory,
+        accountType: nluResult.accountType,
+        amount: nluResult.amount
+      },
+      confirmationStatus: 'pending'
+    });
+
+    const accountData = {
+      name: nluResult.name,
+      category: nluResult.accountCategory,
+      type: nluResult.accountType,
+      openingBalance: isCredit ? 0 : (nluResult.amount || 0),
+      creditLimit: isCredit ? (nluResult.amount || 0) : 0,
+      openingOutstanding: 0,
+      currentOutstanding: 0,
+      availableCredit: isCredit ? (nluResult.amount || 0) : 0,
+      billingCycle: isCredit ? '1st of month' : '',
+      dueDate: isCredit ? '20th of month' : '',
+      description: `Created via AI Assistant: "${rawUtterance}"`,
+      aiAuditId: audit.id
+    };
+
+    this.pendingAction = {
+      type: 'awaiting_confirmation',
+      actionType: 'create_account',
+      auditId: audit.id,
+      accountData
+    };
+
+    const confirmMsg = {
+      sender: 'ai',
+      text: `Please confirm creating this **NEW ACCOUNT**:`,
+      type: 'confirmation_card',
+      data: {
+        ...accountData,
+        isAccount: true,
+        actionType: 'create_account'
+      },
+      timestamp: Date.now()
+    };
+    this.conversationHistory.push(confirmMsg);
+    return confirmMsg;
   }
 
   async prepareTransactionConfirmation(nluResult, rawUtterance) {
@@ -358,7 +415,41 @@ export class AssistantCoordinator {
   }
 
   async executeConfirmedAction() {
-    if (!this.pendingAction || !this.pendingAction.transactionData) return null;
+    if (!this.pendingAction) return null;
+
+    if (this.pendingAction.actionType === 'create_account') {
+      const accData = this.pendingAction.accountData;
+      const auditId = this.pendingAction.auditId;
+
+      const newAccount = AccountModel.create(accData);
+      await this.storage.put('accounts', newAccount);
+      await this.storage.updateAiAuditStatus(auditId, 'confirmed', newAccount.id);
+
+      let successText = `✅ **Account Created Successfully!**\n\n` +
+                        `Created **${newAccount.name}** (${newAccount.type}).\n`;
+      if (newAccount.category === 'credit') {
+        successText += `Credit Limit: **${AccountModel.formatCurrency(newAccount.creditLimit)}** (Available: ${AccountModel.formatCurrency(newAccount.availableCredit)})`;
+      } else {
+        successText += `Opening Balance: **${AccountModel.formatCurrency(newAccount.openingBalance)}**`;
+      }
+
+      this.pendingAction = null;
+      const successMsg = {
+        sender: 'ai',
+        text: successText,
+        type: 'account_success',
+        data: newAccount,
+        timestamp: Date.now()
+      };
+      this.conversationHistory.push(successMsg);
+
+      // Trigger UI refresh
+      this.onUpdate();
+
+      return successMsg;
+    }
+
+    if (!this.pendingAction.transactionData) return null;
 
     const data = this.pendingAction.transactionData;
     const auditId = this.pendingAction.auditId;

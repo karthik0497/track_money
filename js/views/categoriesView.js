@@ -66,8 +66,6 @@ export class CategoriesView {
             </div>
           `).join('')}
         </div>
-
-        <div id="cat-modal-root"></div>
       </div>
     `;
 
@@ -124,7 +122,7 @@ export class CategoriesView {
   }
 
   openAddCategoryModal() {
-    const modalRoot = document.getElementById('cat-modal-root');
+    const modalRoot = document.getElementById('global-modal-root') || document.body;
     if (!modalRoot) return;
 
     modalRoot.innerHTML = `

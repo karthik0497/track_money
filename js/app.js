@@ -292,7 +292,7 @@ class TrackMoneyApp {
 
           <div style="margin-bottom: 1.25rem;">
             <p class="text-sm text-muted">
-              Track-Money runs as an installable Progressive Web App (PWA). You can download and install it straight from your browser with zero APK downloads required!
+              Track-Money runs as an installable Progressive Hybrid Web App. You can install it directly from your browser to your phone's home screen or desktop with 1 tap!
             </p>
           </div>
 
@@ -506,6 +506,12 @@ class TrackMoneyApp {
   openAiAssistant() {
     if (this.assistantView) {
       this.assistantView.open();
+    }
+  }
+
+  openAddAccountModal(preferredCategory = null, prefill = null) {
+    if (this.viewInstances?.accounts) {
+      this.viewInstances.accounts.openAddAccountModal(preferredCategory, prefill);
     }
   }
 

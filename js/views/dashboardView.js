@@ -21,8 +21,8 @@ export class DashboardView {
             <div style="display: flex; align-items: center; gap: 10px;">
               <span style="font-size: 1.6rem;">📲</span>
               <div>
-                <div class="font-bold text-sm">Download & Install as Hybrid App</div>
-                <div class="text-xs text-muted">Use offline directly from browser. 100% private local storage, zero APK needed!</div>
+                <div class="font-bold text-sm">Install as Progressive Hybrid App</div>
+                <div class="text-xs text-muted">Install directly to your mobile home screen with offline local storage!</div>
               </div>
             </div>
             <button class="btn btn-primary btn-xs" id="dash-btn-install-banner">
@@ -145,14 +145,18 @@ export class DashboardView {
                    style="width: ${Math.min(100, metrics.overallCreditUtilization)}%;"></div>
             </div>
 
-            <div class="credit-limits-row">
+            <div class="credit-limits-row" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
               <div>
-                <span class="text-xs text-muted">Total Outstanding:</span>
-                <div class="font-bold text-danger">${AccountModel.formatCurrency(metrics.totalLiabilities)}</div>
+                <span class="text-xs text-muted">Total Limit:</span>
+                <div class="font-bold text-sm">${AccountModel.formatCurrency(metrics.totalCreditLimit)}</div>
+              </div>
+              <div style="text-align: center;">
+                <span class="text-xs text-muted">Outstanding:</span>
+                <div class="font-bold text-danger text-sm">${AccountModel.formatCurrency(metrics.totalLiabilities)}</div>
               </div>
               <div style="text-align: right;">
-                <span class="text-xs text-muted">Available Credit:</span>
-                <div class="font-bold text-success">${AccountModel.formatCurrency(metrics.totalCreditAvailable)}</div>
+                <span class="text-xs text-muted">Available:</span>
+                <div class="font-bold text-success text-sm">${AccountModel.formatCurrency(metrics.totalCreditAvailable)}</div>
               </div>
             </div>
           </div>

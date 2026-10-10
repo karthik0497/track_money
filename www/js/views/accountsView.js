@@ -211,9 +211,6 @@ export class AccountsView {
             </div>
           </div>
         ` : ''}
-
-        <!-- Dedicated Account Details Drawer / Modal Container -->
-        <div id="account-details-modal-root"></div>
       </div>
     `;
 
@@ -234,7 +231,7 @@ export class AccountsView {
     const accountTxs = allTx.filter(tx => tx.accountId === acc.id || tx.targetAccountId === acc.id)
       .sort((a, b) => new Date(b.date || b.createdTimestamp) - new Date(a.date || a.createdTimestamp));
 
-    const modalRoot = document.getElementById('account-details-modal-root');
+    const modalRoot = document.getElementById('global-modal-root') || document.body;
     if (!modalRoot) return;
 
     const isCredit = acc.category === 'credit';
@@ -400,7 +397,7 @@ export class AccountsView {
 
     // Add Account
     container.querySelector('#btn-add-account')?.addEventListener('click', () => {
-      this.openAddAccountModal();
+      this.openAddAccountModal(this.activeTab === 'credit' ? 'credit' : 'debit');
     });
 
     // View details
@@ -438,64 +435,75 @@ export class AccountsView {
     });
   }
 
-  openAddAccountModal() {
-    const modalRoot = document.getElementById('account-details-modal-root');
+  openAddAccountModal(preferredCategory = null, prefill = null) {
+    const modalRoot = document.getElementById('global-modal-root') || document.body;
     if (!modalRoot) return;
+
+    const initialCategory = prefill?.category || preferredCategory || (this.activeTab === 'credit' ? 'credit' : 'debit');
+    const currency = localStorage.getItem('tm_currency') || '₹';
 
     modalRoot.innerHTML = `
       <div class="modal-backdrop fade-in" id="add-acc-backdrop">
         <div class="modal-card account-modal-card slide-up">
           <div class="modal-header">
             <div class="flex-align-center" style="gap: 8px;">
-              <span id="modal-header-icon" style="font-size: 1.25rem;">🏦</span>
-              <h3 id="modal-title-text" style="margin: 0;">Add Financial Account</h3>
+              <span id="modal-header-icon" style="font-size: 1.35rem;">${initialCategory === 'credit' ? '💳' : '🏦'}</span>
+              <div>
+                <h3 id="modal-title-text" style="margin: 0; font-size: 1.15rem;">
+                  ${initialCategory === 'credit' ? 'Add Credit / Card Account' : 'Add Financial / Asset Account'}
+                </h3>
+                <span class="text-xs text-muted" id="modal-subtitle-text">
+                  ${initialCategory === 'credit' ? 'Configure card limits, billing & dues' : 'Bank accounts, savings, deposits & cash'}
+                </span>
+              </div>
             </div>
-            <button class="btn btn-icon" id="close-add-acc">✕</button>
+            <button class="btn btn-icon" id="close-add-acc" aria-label="Close modal">✕</button>
+          </div>
+
+          <!-- Pinned, Perfectly Aligned Category Switcher Tabs -->
+          <div class="modal-tabs-header">
+            <div class="category-segmented-control">
+              <button type="button" class="cat-seg-btn ${initialCategory === 'debit' ? 'active' : ''}" data-category="debit" id="btn-seg-debit">
+                <span>🏦 Debit / Asset</span>
+              </button>
+              <button type="button" class="cat-seg-btn ${initialCategory === 'credit' ? 'active' : ''}" data-category="credit" id="btn-seg-credit">
+                <span>💳 Credit / Card</span>
+              </button>
+            </div>
           </div>
 
           <form id="add-acc-form" class="unified-acc-form">
-            <div class="account-modal-body">
-              <!-- Symmetrical Equal-Width Category Segmented Selector -->
-              <div class="category-segmented-control">
-                <button type="button" class="cat-seg-btn active" data-category="debit" id="btn-seg-debit">
-                  <span>🏦 Debit / Asset</span>
-                </button>
-                <button type="button" class="cat-seg-btn" data-category="credit" id="btn-seg-credit">
-                  <span>💳 Credit / Card</span>
-                </button>
-              </div>
-              <input type="hidden" name="accountCategory" id="hidden-account-category" value="debit">
+            <input type="hidden" name="accountCategory" id="hidden-account-category" value="${initialCategory}">
 
+            <div class="account-modal-body">
               <!-- General Identity Section -->
               <div class="form-card-section">
                 <span class="section-label">Account Identity</span>
                 <div class="form-group" style="margin-bottom: 0.75rem;">
-                  <label>Account Name</label>
-                  <input type="text" name="name" class="form-input" placeholder="e.g. HDFC Salary, ICICI Coral, Cash in Hand" required>
+                  <label for="acc-name-input">Account Name <span class="text-danger">*</span></label>
+                  <input type="text" name="name" id="acc-name-input" class="form-input" 
+                         placeholder="${initialCategory === 'credit' ? 'e.g. ICICI Coral, Amazon ICICI, OneCard' : 'e.g. HDFC Salary, SBI Savings, Cash in Hand'}" required>
                 </div>
 
                 <div class="form-group" style="margin-bottom: 0;">
-                  <label>Account Type</label>
+                  <label for="acc-type-select">Account Type</label>
                   <select name="type" id="acc-type-select" class="form-input">
-                    <optgroup label="Debit / Asset Types" id="debit-types">
-                      ${ACCOUNT_TYPES.DEBIT.map(t => `<option value="${t}">${t}</option>`).join('')}
-                    </optgroup>
-                    <optgroup label="Credit / Liability Types" id="credit-types" style="display:none;">
-                      ${ACCOUNT_TYPES.CREDIT.map(t => `<option value="${t}">${t}</option>`).join('')}
-                    </optgroup>
+                    <!-- Populated dynamically via JS -->
                   </select>
                 </div>
               </div>
 
-              <!-- Financial Values Section (Equal sizing & alignment) -->
+              <!-- Financial Values Section -->
               <div class="form-card-section">
-                <span class="section-label" id="section-financial-label">Financial Balances</span>
+                <span class="section-label" id="section-financial-label">
+                  ${initialCategory === 'credit' ? `Credit Limits & Balances (${currency})` : `Financial Balances (${currency})`}
+                </span>
                 
                 <!-- Debit-specific fields -->
-                <div id="debit-specific-fields">
+                <div id="debit-specific-fields" style="${initialCategory === 'debit' ? 'display:block;' : 'display:none;'}">
                   <div class="form-compact-grid">
                     <div class="form-group" style="margin-bottom: 0;">
-                      <label>Opening Balance (₹)</label>
+                      <label>Opening Balance (${currency})</label>
                       <input type="number" name="openingBalance" class="form-input font-bold" placeholder="0" min="0" step="any" value="0">
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
@@ -505,16 +513,24 @@ export class AccountsView {
                   </div>
                 </div>
 
-                <!-- Credit-specific fields -->
-                <div id="credit-specific-fields" style="display:none;">
+                <!-- Credit-specific fields: Always visible when Credit is selected -->
+                <div id="credit-specific-fields" style="${initialCategory === 'credit' ? 'display:block;' : 'display:none;'}">
                   <div class="form-compact-grid" style="margin-bottom: 0.75rem;">
                     <div class="form-group" style="margin-bottom: 0;">
-                      <label>Credit Limit (₹)</label>
-                      <input type="number" name="creditLimit" class="form-input font-bold" placeholder="e.g. 50000" min="0" step="any">
+                      <label style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>Credit Limit (${currency}) <span class="text-danger">*</span></span>
+                        <span class="text-xs text-muted" style="font-weight: normal;">Total Limit</span>
+                      </label>
+                      <input type="number" name="creditLimit" id="acc-credit-limit-input" class="form-input font-bold" 
+                             placeholder="e.g. 50000" min="0" step="any" ${initialCategory === 'credit' ? 'required' : ''}>
+                      <span class="text-xs text-muted" style="display: block; margin-top: 2px;">Maximum approved credit limit</span>
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
-                      <label>Outstanding (₹)</label>
+                      <label style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>Current Outstanding (${currency})</span>
+                      </label>
                       <input type="number" name="openingOutstanding" class="form-input" placeholder="0" min="0" step="any" value="0">
+                      <span class="text-xs text-muted" style="display: block; margin-top: 2px;">Current unpaid bill / amount</span>
                     </div>
                   </div>
                   <div class="form-compact-grid">
@@ -523,8 +539,8 @@ export class AccountsView {
                       <input type="date" name="dueDate" class="form-input">
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
-                      <label>Billing Cycle</label>
-                      <input type="text" name="billingCycle" class="form-input" placeholder="e.g. 15th">
+                      <label>Billing Cycle / Statement Date</label>
+                      <input type="text" name="billingCycle" class="form-input" placeholder="e.g. 15th of month">
                     </div>
                   </div>
                 </div>
@@ -532,12 +548,12 @@ export class AccountsView {
 
               <div class="form-group" style="margin-bottom: 0.5rem;">
                 <label>Optional Note</label>
-                <input type="text" name="description" class="form-input" placeholder="e.g. Daily expenses, shopping rewards">
+                <input type="text" name="description" class="form-input" placeholder="e.g. Daily expenses, shopping rewards, backup card">
               </div>
             </div>
 
             <!-- Sticky Modal Footer -->
-            <div class="modal-footer" style="margin-top: 1rem; padding-top: 0.75rem;">
+            <div class="modal-footer">
               <button type="button" class="btn btn-outline" id="cancel-add-acc">Cancel</button>
               <button type="submit" class="btn btn-primary" id="submit-save-acc">Save Account</button>
             </div>
@@ -552,36 +568,82 @@ export class AccountsView {
     const hiddenCat = document.getElementById('hidden-account-category');
     const debitFields = document.getElementById('debit-specific-fields');
     const creditFields = document.getElementById('credit-specific-fields');
-    const debitTypes = document.getElementById('debit-types');
-    const creditTypes = document.getElementById('credit-types');
     const typeSelect = document.getElementById('acc-type-select');
     const iconEl = document.getElementById('modal-header-icon');
+    const titleEl = document.getElementById('modal-title-text');
+    const subtitleEl = document.getElementById('modal-subtitle-text');
+    const financialLabel = document.getElementById('section-financial-label');
+    const nameInput = document.getElementById('acc-name-input');
+    const creditLimitInput = document.getElementById('acc-credit-limit-input');
 
-    const setCategory = (cat) => {
+    const updateTypeSelectOptions = (cat, selectedType = null) => {
+      const types = cat === 'credit' ? ACCOUNT_TYPES.CREDIT : ACCOUNT_TYPES.DEBIT;
+      const defaultChoice = selectedType && types.includes(selectedType) ? selectedType : (cat === 'credit' ? 'Credit Card' : 'Bank Account');
+      typeSelect.innerHTML = types.map(t => `<option value="${t}" ${t === defaultChoice ? 'selected' : ''}>${t}</option>`).join('');
+    };
+
+    const setCategory = (cat, desiredType = null) => {
       hiddenCat.value = cat;
       if (cat === 'credit') {
         segDebit.classList.remove('active');
         segCredit.classList.add('active');
         debitFields.style.display = 'none';
         creditFields.style.display = 'block';
-        debitTypes.style.display = 'none';
-        creditTypes.style.display = 'block';
-        typeSelect.value = 'Credit Card';
+        if (financialLabel) financialLabel.textContent = `Credit Limits & Balances (${currency})`;
+        if (titleEl) titleEl.textContent = 'Add Credit / Card Account';
+        if (subtitleEl) subtitleEl.textContent = 'Configure card limits, billing & dues';
         if (iconEl) iconEl.textContent = '💳';
+        if (nameInput && !nameInput.value) nameInput.placeholder = 'e.g. ICICI Coral, Amazon ICICI, OneCard';
+        if (creditLimitInput) creditLimitInput.required = true;
+        updateTypeSelectOptions('credit', desiredType);
       } else {
         segCredit.classList.remove('active');
         segDebit.classList.add('active');
         debitFields.style.display = 'block';
         creditFields.style.display = 'none';
-        debitTypes.style.display = 'block';
-        creditTypes.style.display = 'none';
-        typeSelect.value = 'Bank Account';
+        if (financialLabel) financialLabel.textContent = `Asset Balances (${currency})`;
+        if (titleEl) titleEl.textContent = 'Add Financial / Asset Account';
+        if (subtitleEl) subtitleEl.textContent = 'Bank accounts, savings, deposits & cash';
         if (iconEl) iconEl.textContent = '🏦';
+        if (nameInput && !nameInput.value) nameInput.placeholder = 'e.g. HDFC Salary, SBI Savings, Cash in Hand';
+        if (creditLimitInput) creditLimitInput.required = false;
+        updateTypeSelectOptions('debit', desiredType);
       }
     };
 
+    // Initialize with active category
+    setCategory(initialCategory, prefill?.type);
+
+    if (prefill) {
+      if (nameInput && prefill.name) nameInput.value = prefill.name;
+      if (prefill.category === 'credit' && creditLimitInput && prefill.creditLimit) {
+        creditLimitInput.value = prefill.creditLimit;
+      }
+      if (prefill.category === 'debit') {
+        const openBalInput = form.querySelector('input[name="openingBalance"]');
+        if (openBalInput && (prefill.openingBalance !== undefined && prefill.openingBalance !== null)) {
+          openBalInput.value = prefill.openingBalance;
+        }
+      }
+    }
+
+    // Segmented button listeners
     segDebit?.addEventListener('click', () => setCategory('debit'));
     segCredit?.addEventListener('click', () => setCategory('credit'));
+
+    // Dynamic type change listener: If user selects an account type from dropdown, auto-switch category
+    typeSelect?.addEventListener('change', (e) => {
+      const selectedType = e.target.value;
+      if (ACCOUNT_TYPES.CREDIT.includes(selectedType)) {
+        if (hiddenCat.value !== 'credit') {
+          setCategory('credit', selectedType);
+        }
+      } else if (ACCOUNT_TYPES.DEBIT.includes(selectedType)) {
+        if (hiddenCat.value !== 'debit') {
+          setCategory('debit', selectedType);
+        }
+      }
+    });
 
     document.getElementById('close-add-acc')?.addEventListener('click', () => modalRoot.innerHTML = '');
     document.getElementById('cancel-add-acc')?.addEventListener('click', () => modalRoot.innerHTML = '');
@@ -592,15 +654,20 @@ export class AccountsView {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const formData = new FormData(form);
-      const category = formData.get('accountCategory');
+      const category = formData.get('accountCategory') || 'debit';
+      const selectedType = formData.get('type') || (category === 'credit' ? 'Credit Card' : 'Bank Account');
+      const isCredit = category === 'credit' || ACCOUNT_TYPES.CREDIT.includes(selectedType);
+
+      const rawLimit = formData.get('creditLimit');
+      const limitVal = isCredit ? (rawLimit !== null && rawLimit !== '' ? Number(rawLimit) : 0) : 0;
 
       const newAccount = AccountModel.create({
-        name: formData.get('name'),
-        category,
-        type: formData.get('type'),
-        openingBalance: formData.get('openingBalance') || 0,
-        creditLimit: formData.get('creditLimit') || 0,
-        openingOutstanding: formData.get('openingOutstanding') || 0,
+        name: (formData.get('name') || '').trim(),
+        category: isCredit ? 'credit' : 'debit',
+        type: selectedType,
+        openingBalance: isCredit ? 0 : (Number(formData.get('openingBalance')) || 0),
+        creditLimit: limitVal,
+        openingOutstanding: isCredit ? (Number(formData.get('openingOutstanding')) || 0) : 0,
         dueDate: formData.get('dueDate') || '',
         billingCycle: formData.get('billingCycle') || '',
         description: formData.get('description') || ''
@@ -608,6 +675,9 @@ export class AccountsView {
 
       await this.storage.put('accounts', newAccount);
       modalRoot.innerHTML = '';
+      if (this.activeTab !== 'all') {
+        this.activeTab = newAccount.category;
+      }
       this.render(document.getElementById('app-main-view'));
       this.app.showToast(`Account "${newAccount.name}" created!`);
     });

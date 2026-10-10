@@ -17,7 +17,72 @@ export const STORES = {
 };
 
 export const DEFAULT_CATEGORIES = [
-  // Expense Categories with Subcategories
+  // User Everyday Expense Categories
+  {
+    name: 'Bike Expense',
+    type: 'expense',
+    icon: '🏍️',
+    color: '#f97316',
+    subcategories: ['Petrol / Fuel', 'Bike Service', 'Repairs & Parts', 'Insurance', 'Puncture & Air', 'Accessories']
+  },
+  {
+    name: 'Car Expense',
+    type: 'expense',
+    icon: '🚗',
+    color: '#2563eb',
+    subcategories: ['Petrol / Diesel', 'Car Wash & Detailing', 'Service & Maintenance', 'Toll & FASTag', 'Parking', 'Car Insurance']
+  },
+  {
+    name: 'Travel',
+    type: 'expense',
+    icon: '🧳',
+    color: '#06b6d4',
+    subcategories: ['Bus & Metro', 'Train / IRCTC', 'Flight Tickets', 'Hotel & Stay', 'Auto / Taxi', 'Trip Expenses']
+  },
+  {
+    name: 'Outside Food',
+    type: 'expense',
+    icon: '🍽️',
+    color: '#e11d48',
+    subcategories: ['Restaurant Dining', 'Street Food & Chaat', 'Office Lunch', 'Tea & Coffee / Snacks', 'Weekend Outing']
+  },
+  {
+    name: 'Online Food',
+    type: 'expense',
+    icon: '🛵',
+    color: '#ea580c',
+    subcategories: ['Zomato', 'Swiggy', 'Blinkit / Instamart', 'Pizza / Burger Delivery', 'Late Night Food']
+  },
+  {
+    name: 'Water Bill',
+    type: 'expense',
+    icon: '💧',
+    color: '#0284c7',
+    subcategories: ['Monthly Water Bill', 'Water Tanker', 'Drinking Water Cans', 'Plumbing Maintenance']
+  },
+  {
+    name: 'Current Bill',
+    type: 'expense',
+    icon: '⚡',
+    color: '#eab308',
+    subcategories: ['Monthly Current Bill', 'Meter Charges', 'Inverter / Power Backup', 'Electricity Deposit']
+  },
+  {
+    name: 'Giving to Dad',
+    type: 'expense',
+    icon: '👨‍👧‍👦',
+    color: '#8b5cf6',
+    subcategories: ['Monthly Allowance', 'Medicines & Health', 'Home Maintenance', 'Festival & Gifts', 'Family Support']
+  },
+  {
+    name: 'Car EMI',
+    type: 'expense',
+    icon: '🚘',
+    color: '#ec4899',
+    subcategories: ['Monthly Car Loan EMI', 'Loan Prepayment', 'Down Payment', 'Processing & Finance Fees']
+  },
+
+  // General Expense Categories with Subcategories
   {
     name: 'Food',
     type: 'expense',

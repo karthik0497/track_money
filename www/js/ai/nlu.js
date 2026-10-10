@@ -2,6 +2,68 @@
 // 100% On-Device, Offline-First Intent Detection & Entity Extraction
 
 export const CATEGORY_KEYWORDS = {
+  'Bike Expense': {
+    'Petrol / Fuel': ['bike petrol', 'bike fuel', 'bike diesel', 'fuel for bike', 'petrol for bike', 'filled bike petrol'],
+    'Bike Service': ['bike service', 'bike repair', 'bike mechanic', 'engine oil bike', 'two wheeler service'],
+    'Repairs & Parts': ['bike parts', 'bike tyre', 'bike battery', 'brake pad', 'bike spare'],
+    Insurance: ['bike insurance', 'two wheeler insurance', 'bike policy'],
+    'Puncture & Air': ['bike puncture', 'air pressure', 'bike tube']
+  },
+  'Car Expense': {
+    'Petrol / Diesel': ['car petrol', 'car diesel', 'car fuel', 'cng', 'petrol for car', 'diesel for car'],
+    'Car Wash & Detailing': ['car wash', 'car cleaning', 'car spa', 'foam wash', 'car detailing'],
+    'Service & Maintenance': ['car service', 'car mechanic', 'car maintenance', 'wheel alignment', 'car oil change'],
+    'Toll & FASTag': ['fastag', 'toll', 'toll plaza', 'fastag recharge', 'highway toll'],
+    Parking: ['car parking', 'parking fee', 'valet parking'],
+    'Car Insurance': ['car insurance', 'four wheeler insurance', 'car policy']
+  },
+  Travel: {
+    'Bus & Metro': ['bus ticket', 'metro ticket', 'metro smart card', 'ksrtc', 'redbus', 'chalo'],
+    'Train / IRCTC': ['train ticket', 'irctc', 'railway ticket', 'tatkal'],
+    'Flight Tickets': ['flight ticket', 'air ticket', 'boarding pass', 'indigo flight'],
+    'Hotel & Stay': ['hotel stay', 'oyo', 'resort', 'airbnb stay', 'room rent hotel'],
+    'Auto / Taxi': ['auto fare', 'taxi fare', 'rapido auto', 'ola auto', 'uber auto'],
+    'Trip Expenses': ['trip expenses', 'travel expenses', 'sightseeing', 'tour ticket']
+  },
+  'Outside Food': {
+    'Restaurant Dining': ['hotel food', 'restaurant', 'dining out', 'dinner outside', 'lunch outside', 'family dinner', 'buffet'],
+    'Street Food & Chaat': ['street food', 'pani puri', 'chaat', 'shawarma', 'dosa stall', 'roll corner'],
+    'Office Lunch': ['office lunch', 'canteen', 'office food', 'mess bill', 'dabba'],
+    'Tea & Coffee / Snacks': ['tea and snacks', 'chai sutta', 'coffee stall', 'tea stall', 'samosa outside'],
+    'Weekend Outing': ['weekend lunch', 'weekend dinner', 'outing food']
+  },
+  'Online Food': {
+    Zomato: ['zomato', 'zomato order', 'ordered on zomato'],
+    Swiggy: ['swiggy', 'swiggy order', 'ordered on swiggy', 'swiggy delivery'],
+    'Blinkit / Instamart': ['blinkit snacks', 'instamart snacks', 'zepto snacks', 'quick commerce food'],
+    'Pizza / Burger Delivery': ['dominos', 'pizza hut', 'burger king', 'mcdonalds delivery', 'kfc delivery'],
+    'Late Night Food': ['late night order', 'midnight craving', 'late night delivery']
+  },
+  'Water Bill': {
+    'Monthly Water Bill': ['water bill', 'water board', 'jal board', 'municipal water'],
+    'Water Tanker': ['water tanker', 'tanker water', 'water supply tanker'],
+    'Drinking Water Cans': ['water can', 'bisleri can', '20 litre can', 'mineral water can'],
+    'Plumbing Maintenance': ['plumber bill', 'pipe leak', 'motor repair']
+  },
+  'Current Bill': {
+    'Monthly Current Bill': ['current bill', 'electricity bill', 'power bill', 'eb bill', 'bijli bill', 'bescom', 'tneb', 'msedcl', 'tata power'],
+    'Meter Charges': ['meter charge', 'meter reading', 'electricity fixed charge'],
+    'Inverter / Power Backup': ['inverter battery', 'generator diesel', 'ups battery'],
+    'Electricity Deposit': ['electricity deposit', 'eb deposit']
+  },
+  'Giving to Dad': {
+    'Monthly Allowance': ['giving to dad', 'sent to dad', 'money to dad', 'dad pocket money', 'transfer to dad', 'gave to father', 'dad monthly', 'sent dad money'],
+    'Medicines & Health': ['dad medicine', 'dad doctor', 'father medical', 'dad health'],
+    'Home Maintenance': ['home expenses dad', 'dad renovation', 'village home'],
+    'Festival & Gifts': ['dad gift', 'father gift', 'festival money dad'],
+    'Family Support': ['family support', 'parents support', 'home support']
+  },
+  'Car EMI': {
+    'Monthly Car Loan EMI': ['car emi', 'car loan', 'auto loan emi', 'vehicle emi', 'car loan installment', 'monthly car emi'],
+    'Loan Prepayment': ['car loan prepayment', 'part payment car loan'],
+    'Down Payment': ['car down payment', 'car booking advance'],
+    'Processing & Finance Fees': ['car loan processing fee', 'hypothecation fee']
+  },
   Food: {
     Restaurant: ['lunch', 'dinner', 'breakfast', 'brunch', 'restaurant', 'cafe', 'dine out', 'hotel food', 'mcdonalds', 'kfc', 'starbucks', 'dominos', 'pizza', 'burger', 'biryani'],
     Groceries: ['groceries', 'supermarket', 'blinkit', 'zepto', 'instamart', 'bigbasket', 'vegetables', 'fruits', 'milk', 'bread', 'kirana', 'provisions'],
@@ -105,6 +167,15 @@ export class NLUEngine {
   static parse(text, availableAccounts = [], availableCategories = []) {
     const raw = text.trim();
     const clean = raw.toLowerCase();
+
+    // 0. Check if user wants to create an account
+    const createAccMatch = this.detectCreateAccount(clean, raw);
+    if (createAccMatch) {
+      return {
+        intent: 'create_account',
+        ...createAccMatch
+      };
+    }
 
     // 1. Check if it's a financial query / question
     if (this.isQueryIntent(clean)) {
@@ -238,6 +309,105 @@ export class NLUEngine {
       };
     }
     return null;
+  }
+
+  static detectCreateAccount(clean, raw) {
+    // Exclude informational questions like "how to create an account"
+    if (/\bhow\s+(?:to|can\s+i|do\s+i)\b/i.test(clean)) {
+      return null;
+    }
+
+    // Trigger patterns for creating accounts
+    const createRegex = /\b(?:create|add|open|make)\s+(?:a\s+|an\s+)?(?:new\s+)?(?:(?:bank|credit|savings?|debit|cash|current)\s+)?(?:account|card)\b/i;
+    const directTriggers = [
+      'create account', 'add account', 'new account', 'open account', 'make account',
+      'create credit card', 'add credit card', 'new credit card',
+      'create bank account', 'add bank account', 'open bank account'
+    ];
+
+    const isTriggerMatch = createRegex.test(clean) || directTriggers.some(t => clean.includes(t));
+    if (!isTriggerMatch) {
+      return null;
+    }
+
+    // Determine category: credit vs debit
+    const isCredit = /\b(credit|credit card|cc|limit|bnpl|loan|pay later)\b/i.test(clean) && !clean.includes('debit card');
+    const category = isCredit ? 'credit' : 'debit';
+
+    // Determine type
+    let type = isCredit ? 'Credit Card' : 'Bank Account';
+    if (isCredit) {
+      if (clean.includes('amazon pay later') || clean.includes('pay later')) {
+        type = 'Amazon Pay Later';
+      } else if (clean.includes('bnpl')) {
+        type = 'BNPL';
+      } else if (clean.includes('loan')) {
+        type = 'Personal Loan';
+      } else {
+        type = 'Credit Card';
+      }
+    } else {
+      if (clean.includes('saving') || clean.includes('savings')) {
+        type = 'Savings Account';
+      } else if (clean.includes('cash')) {
+        type = 'Cash';
+      } else if (clean.includes('current')) {
+        type = 'Current Account';
+      } else if (clean.includes('fixed deposit') || /\bfd\b/i.test(clean)) {
+        type = 'Fixed Deposit';
+      } else if (clean.includes('pf') || clean.includes('provident')) {
+        type = 'PF Account';
+      } else if (clean.includes('demat') || clean.includes('trading')) {
+        type = 'Demat Account';
+      } else {
+        type = 'Bank Account';
+      }
+    }
+
+    // Extract amount (openingBalance for debit, creditLimit for credit)
+    const amount = this.extractAmount(clean);
+
+    // Clean name candidate
+    let nameCand = clean;
+
+    // 1. Remove command prefix (create account, add new account, etc.)
+    nameCand = nameCand.replace(/\b(?:please\s+)?(?:can\s+you\s+)?(?:create|add|open|make)\s+(?:a\s+|an\s+)?(?:new\s+)?(?:(?:bank|credit|savings?|debit|cash|current)\s+)?(?:account|card)\b/gi, ' ');
+
+    // 2. Remove phrases with limit or balance keywords
+    nameCand = nameCand.replace(/\b(?:with\s+)?(?:a\s+)?(?:opening\s+)?(?:balance|limit|credit\s+limit)\s*(?:of|is|:)?\s*(?:₹|rs\.?|inr)?\s*[\d,.]+(?:\s*(?:k|lakh|lac|rupees|rs))?/gi, ' ');
+    nameCand = nameCand.replace(/\b(?:with|of|having)\s+(?:₹|rs\.?|inr)?\s*[\d,.]+(?:\s*(?:k|lakh|lac|rupees|rs))?/gi, ' ');
+
+    // 3. Remove standalone numbers and currencies
+    nameCand = nameCand.replace(/(?:₹|rs\.?|inr)\s*[\d,.]+(?:\s*(?:k|lakh|lac|rupees|rs))?/gi, ' ');
+    nameCand = nameCand.replace(/\b[\d,]+(?:\.\d+)?(?:\s*(?:k|lakh|lac|rupees|rs))?\b/gi, ' ');
+
+    // 4. Remove leading/trailing connecting words
+    nameCand = nameCand.replace(/^\s*(?:called|named|for|with|as|my|an?)\s+/i, ' ');
+    nameCand = nameCand.replace(/\s+(?:called|named|for|with|as)\s*$/i, ' ');
+    nameCand = nameCand.trim();
+
+    // If candidate became empty, default sensibly based on type
+    if (!nameCand || nameCand.length === 0) {
+      nameCand = type;
+    }
+
+    // Format title case with popular bank acronyms preserved uppercase
+    const acronyms = new Set(['sbi', 'hdfc', 'icici', 'pnb', 'bob', 'axis', 'kotak', 'idfc', 'rbl', 'yes', 'upi', 'pf', 'fd']);
+    const formattedName = nameCand.split(/\s+/).filter(Boolean).map(w => {
+      const low = w.toLowerCase();
+      if (acronyms.has(low)) return low.toUpperCase();
+      return low.charAt(0).toUpperCase() + low.slice(1);
+    }).join(' ');
+
+    return {
+      type: 'create_account',
+      accountCategory: category,
+      accountType: type,
+      name: formattedName,
+      amount: amount || 0,
+      isCredit,
+      rawText: raw
+    };
   }
 
   static detectIsIncome(text) {

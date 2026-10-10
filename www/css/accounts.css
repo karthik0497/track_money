@@ -10,8 +10,41 @@
 
 @media (max-width: 600px) {
   .accounts-summary-row {
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
     gap: 6px;
+  }
+  .summary-chip {
+    padding: 8px 8px;
+  }
+  .chip-val {
+    font-size: 0.92rem;
+  }
+  .chip-label {
+    font-size: 0.68rem;
+  }
+  .accounts-card-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .account-card {
+    padding: 1rem;
+  }
+  .card-quick-actions {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .card-quick-actions .btn {
+    flex: 1;
+    min-height: 38px;
+    justify-content: center;
+  }
+  .detail-banner {
+    padding: 1rem;
+  }
+  .detail-actions-bar .btn {
+    flex: 1;
+    min-height: 40px;
+    justify-content: center;
   }
 }
 

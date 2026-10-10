@@ -62,16 +62,16 @@ export class SettingsView {
           </form>
         </div>
 
-        <!-- 2. Web & Hybrid App Installation (No APK Needed) -->
+        <!-- 2. Web & Hybrid App Installation -->
         <div class="card" style="margin-bottom: 1.5rem;">
           <div class="card-header">
-            <h4>Download & Install as App</h4>
-            <span class="badge badge-info" id="badge-pwa-status">Browser PWA</span>
+            <h4>Install as Hybrid App</h4>
+            <span class="badge badge-info" id="badge-pwa-status">Hybrid App</span>
           </div>
-          <p class="text-sm text-muted">You do not need an APK file. You can install Track-Money directly from this browser onto your Android phone, iPhone/iPad, Windows, or Mac with 1 tap.</p>
+          <p class="text-sm text-muted">You can install Track-Money directly from this browser onto your Android phone, iPhone, iPad, Windows, or Mac with 1 tap. Runs offline in standalone mode with embedded local database.</p>
           <div style="margin-top: 1rem; display: flex; gap: 10px; flex-wrap: wrap;">
             <button class="btn btn-primary btn-sm" id="btn-settings-install-app">
-              📲 Install App on this Device
+              📲 Install Hybrid App on this Device
             </button>
             <button class="btn btn-outline btn-sm" id="btn-settings-install-guide">
               ℹ️ How to Install (iOS / Android / PC)
@@ -200,6 +200,9 @@ export class SettingsView {
           <div class="backup-actions-row" style="margin-top: 1rem; display: flex; gap: 12px; flex-wrap: wrap;">
             <button class="btn btn-outline" id="settings-export-json">
               💾 Download Full JSON Backup
+            </button>
+            <button class="btn btn-outline" id="settings-export-csv">
+              📄 Export Transactions CSV
             </button>
             <label class="btn btn-outline" style="cursor: pointer;">
               📂 Restore Backup from JSON
@@ -383,6 +386,35 @@ export class SettingsView {
       a.click();
       URL.revokeObjectURL(url);
       this.app.showToast('Full JSON backup downloaded.');
+    });
+
+    // CSV Export
+    container.querySelector('#settings-export-csv')?.addEventListener('click', async () => {
+      const transactions = await this.storage.getAll('transactions');
+      const accounts = await this.storage.getAll('accounts');
+      const accMap = new Map(accounts.map(a => [a.id, a.name]));
+      const headers = ['Transaction ID', 'Date', 'Type', 'Account', 'Category', 'Subcategory', 'Amount', 'Description', 'Payment Method', 'Notes'];
+      const rows = transactions.map(t => [
+        t.id,
+        t.date,
+        t.type,
+        `"${(accMap.get(t.accountId) || t.accountId || '').replace(/"/g, '""')}"`,
+        `"${(t.category || '').replace(/"/g, '""')}"`,
+        `"${(t.subcategory || '').replace(/"/g, '""')}"`,
+        t.amount,
+        `"${(t.description || '').replace(/"/g, '""')}"`,
+        `"${(t.paymentMethod || '').replace(/"/g, '""')}"`,
+        `"${(t.notes || '').replace(/"/g, '""')}"`
+      ]);
+      const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `track_money_transactions_${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      this.app.showToast('CSV transactions downloaded.');
     });
 
     // JSON Restore
