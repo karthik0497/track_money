@@ -65,27 +65,36 @@ export class SettingsView {
         <!-- 2. Appearance & Theme (Dark Mode / Light Mode) -->
         <div class="card" style="margin-bottom: 1.5rem;">
           <div class="card-header">
-            <h4>Appearance & Theme</h4>
-            <span class="badge badge-primary" id="badge-theme-mode">${localStorage.getItem('tm_theme') === 'light' ? '☀️ Light Mode' : '🌙 Dark Mode'}</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="text-lg">🎨</span>
+              <h4>Appearance & Theme</h4>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="badge badge-primary" id="badge-theme-mode">${localStorage.getItem('tm_theme') === 'light' ? '☀️ Light Mode' : '🌙 Dark Mode'}</span>
+              <button type="button" class="btn btn-outline btn-xs" id="btn-quick-theme-toggle" title="Quick toggle between Light and Dark mode">
+                ${localStorage.getItem('tm_theme') === 'light' ? '🌙 Switch to Dark' : '☀️ Switch to Light'}
+              </button>
+            </div>
           </div>
-          <p class="text-sm text-muted">Choose your preferred visual style. Track-Money features both high-contrast OLED dark mode and modern clean light mode.</p>
-          <div style="margin-top: 1rem; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-            <div class="radio-toggle-group">
-              <label class="radio-pill">
+          <p class="text-sm text-muted">Choose your preferred visual theme. Select Dark Mode for deep OLED blacks or Light Mode for clean high-contrast daytime readability.</p>
+          <div style="margin-top: 1rem;">
+            <div class="radio-toggle-group" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px;">
+              <label class="radio-pill" style="padding: 12px 14px; cursor: pointer; text-align: center;">
                 <input type="radio" name="app_theme_opt" value="dark" ${(!localStorage.getItem('tm_theme') || localStorage.getItem('tm_theme') === 'dark') ? 'checked' : ''}>
-                <span>🌙 Dark Mode</span>
+                <span style="font-weight: 600;">🌙 Dark Mode</span>
               </label>
-              <label class="radio-pill">
+              <label class="radio-pill" style="padding: 12px 14px; cursor: pointer; text-align: center;">
                 <input type="radio" name="app_theme_opt" value="light" ${localStorage.getItem('tm_theme') === 'light' ? 'checked' : ''}>
-                <span>☀️ Light Mode</span>
+                <span style="font-weight: 600;">☀️ Light Mode</span>
               </label>
-              <label class="radio-pill">
+              <label class="radio-pill" style="padding: 12px 14px; cursor: pointer; text-align: center;">
                 <input type="radio" name="app_theme_opt" value="system" ${localStorage.getItem('tm_theme') === 'system' ? 'checked' : ''}>
-                <span>⚙️ System Auto</span>
+                <span style="font-weight: 600;">⚙️ System Auto</span>
               </label>
             </div>
           </div>
         </div>
+
 
         <!-- 3. Web & Hybrid App Installation -->
         <div class="card" style="margin-bottom: 1.5rem;">
@@ -317,17 +326,36 @@ export class SettingsView {
       this.app.openProfileModal();
     });
 
+    // Quick Theme Toggle Button in Settings
+    container.querySelector('#btn-quick-theme-toggle')?.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme') || 'dark';
+      const nextTheme = current === 'dark' ? 'light' : 'dark';
+      this.app.applyTheme(nextTheme, true);
+      const radio = container.querySelector(`input[name="app_theme_opt"][value="${nextTheme}"]`);
+      if (radio) radio.checked = true;
+      const badge = container.querySelector('#badge-theme-mode');
+      if (badge) badge.textContent = nextTheme === 'light' ? '☀️ Light Mode' : '🌙 Dark Mode';
+      const btn = container.querySelector('#btn-quick-theme-toggle');
+      if (btn) btn.textContent = nextTheme === 'light' ? '🌙 Switch to Dark' : '☀️ Switch to Light';
+    });
+
     // Theme Mode Change Handlers
     container.querySelectorAll('input[name="app_theme_opt"]').forEach(radio => {
       radio.addEventListener('change', (e) => {
         const theme = e.target.value;
         this.app.applyTheme(theme, true);
+        const resolved = document.documentElement.getAttribute('data-theme') || theme;
         const badge = container.querySelector('#badge-theme-mode');
         if (badge) {
-          badge.textContent = theme === 'light' ? '☀️ Light Mode' : '🌙 Dark Mode';
+          badge.textContent = resolved === 'light' ? '☀️ Light Mode' : '🌙 Dark Mode';
+        }
+        const btn = container.querySelector('#btn-quick-theme-toggle');
+        if (btn) {
+          btn.textContent = resolved === 'light' ? '🌙 Switch to Dark' : '☀️ Switch to Light';
         }
       });
     });
+
 
     // PWA Install Handlers
     container.querySelector('#btn-settings-install-app')?.addEventListener('click', () => {

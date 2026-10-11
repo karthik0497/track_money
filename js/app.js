@@ -503,9 +503,14 @@ class TrackMoneyApp {
             </div>
 
             <div class="modal-footer" style="padding-top: 0.5rem; justify-content: space-between;">
-              <button type="button" class="btn btn-outline btn-xs" id="quick-export-json">
-                💾 Backup JSON
-              </button>
+              <div style="display: flex; gap: 6px;">
+                <button type="button" class="btn btn-outline btn-xs" id="quick-export-json">
+                  💾 Backup JSON
+                </button>
+                <button type="button" class="btn btn-outline btn-xs" id="quick-profile-settings">
+                  ⚙️ Settings
+                </button>
+              </div>
               <div style="display: flex; gap: 8px;">
                 <button type="button" class="btn btn-outline btn-sm" id="cancel-profile-modal">Close</button>
                 <button type="submit" class="btn btn-primary btn-sm">Save Changes</button>
@@ -518,11 +523,16 @@ class TrackMoneyApp {
 
     document.getElementById('close-profile-modal')?.addEventListener('click', () => modalRoot.innerHTML = '');
     document.getElementById('cancel-profile-modal')?.addEventListener('click', () => modalRoot.innerHTML = '');
+    document.getElementById('quick-profile-settings')?.addEventListener('click', () => {
+      modalRoot.innerHTML = '';
+      this.navigateTo('settings');
+    });
     document.getElementById('profile-modal-backdrop')?.addEventListener('click', (e) => {
       if (e.target.id === 'profile-modal-backdrop') modalRoot.innerHTML = '';
     });
 
     document.getElementById('quick-export-json')?.addEventListener('click', async () => {
+
       const data = await this.storage.exportAllData();
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
