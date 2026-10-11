@@ -259,6 +259,15 @@ export class AssistantView {
     const response = await this.coordinator.processInput(text);
     if (!response) return;
 
+    if (response.type === 'account_created' && response.data) {
+      if (this.app?.showToast) {
+        this.app.showToast(`Account "${response.data.name}" created!`);
+      }
+      if (this.speech) {
+        this.speech.speak(`I have created your ${response.data.name} account.`);
+      }
+    }
+
     this.renderAiMessage(response);
     msgContainer.scrollTop = msgContainer.scrollHeight;
   }
@@ -269,7 +278,58 @@ export class AssistantView {
 
     let contentHtml = '';
 
-    if (msg.type === 'confirmation_card') {
+    if (msg.type === 'account_created') {
+      const data = msg.data;
+      const isCredit = data.category === 'credit';
+      contentHtml = `
+        <div class="msg-bubble confirmation-bubble fade-in">
+          <div class="confirm-card-header">
+            <span class="confirm-badge" style="background: rgba(16, 185, 129, 0.18); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.35);">
+              ✅ ACCOUNT CREATED
+            </span>
+            <strong>Account Added to Database</strong>
+          </div>
+
+          <div class="confirm-card-body">
+            <div class="confirm-row">
+              <span class="text-muted">Account Name:</span>
+              <span class="font-bold text-lg">${this.escapeHtml(data.name)}</span>
+            </div>
+            <div class="confirm-row">
+              <span class="text-muted">Category:</span>
+              <span class="badge ${isCredit ? 'badge-danger' : 'badge-primary'}">
+                ${isCredit ? '💳 Credit / Card' : '🏦 Debit / Asset'}
+              </span>
+            </div>
+            <div class="confirm-row">
+              <span class="text-muted">Account Type:</span>
+              <span class="font-bold">${this.escapeHtml(data.type)}</span>
+            </div>
+            <div class="confirm-row">
+              <span class="text-muted">${isCredit ? 'Credit Limit:' : 'Opening Balance:'}</span>
+              <span class="font-bold text-xl ${isCredit ? 'text-warning' : 'text-primary'}">
+                ${AccountModel.formatCurrency(isCredit ? data.creditLimit : data.openingBalance)}
+              </span>
+            </div>
+            <p class="text-xs text-muted" style="margin-top: 6px;">
+              Saved locally to your device memory. You can record expenses or income to this account immediately!
+            </p>
+          </div>
+
+          <div class="confirm-actions" style="margin-top: 10px;">
+            <button class="btn btn-sm btn-primary btn-view-created-acc" data-acc-id="${data.id}">
+              🏦 View in Accounts
+            </button>
+            <button class="btn btn-sm btn-outline btn-edit-created-acc" data-acc-id="${data.id}">
+              ✏ Edit
+            </button>
+            <button class="btn btn-sm btn-text text-danger btn-undo-created-acc" data-acc-id="${data.id}" data-acc-name="${this.escapeHtml(data.name)}">
+              🗑️ Delete
+            </button>
+          </div>
+        </div>
+      `;
+    } else if (msg.type === 'confirmation_card') {
       const data = msg.data;
       const isAccount = data.isAccount || data.actionType === 'create_account';
       const isTransfer = data.type === 'transfer';
@@ -476,6 +536,51 @@ export class AssistantView {
       btn.addEventListener('click', (e) => {
         const accName = e.currentTarget.dataset.accountName;
         this.handleSendMessage(accName);
+      });
+    });
+
+    // View Created Account button
+    msgElement.querySelectorAll('.btn-view-created-acc').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.close();
+        if (this.app?.navigateTo) {
+          this.app.navigateTo('accounts');
+        }
+      });
+    });
+
+    // Edit Created Account button
+    msgElement.querySelectorAll('.btn-edit-created-acc').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const accId = e.currentTarget.dataset.accId;
+        this.close();
+        const acc = await this.coordinator.storage.getAccountById(accId);
+        if (acc && this.app?.openAddAccountModal) {
+          this.app.openAddAccountModal(acc.category, acc, acc.id);
+        }
+      });
+    });
+
+    // Undo / Delete Created Account button
+    msgElement.querySelectorAll('.btn-undo-created-acc').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const accId = e.currentTarget.dataset.accId;
+        const accName = e.currentTarget.dataset.accName;
+        e.currentTarget.disabled = true;
+        await this.coordinator.storage.delete('accounts', accId);
+        await this.coordinator.storage.saveLocalEmergencySnapshot();
+        if (this.coordinator.onUpdate) {
+          this.coordinator.onUpdate();
+        }
+        if (this.app?.showToast) {
+          this.app.showToast(`Account "${accName}" deleted`);
+        }
+        this.renderAiMessage({
+          sender: 'ai',
+          text: `🗑️ Deleted account **"${accName}"**.`,
+          type: 'text'
+        });
+        msgContainer.scrollTop = msgContainer.scrollHeight;
       });
     });
   }

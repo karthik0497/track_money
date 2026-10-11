@@ -3,10 +3,22 @@
   "framework": null,
   "buildCommand": "npm run build",
   "outputDirectory": "www",
-  "cleanUrls": true,
+  "cleanUrls": false,
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
   "headers": [
     {
       "source": "/sw.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/manifest.json",
       "headers": [
         {
           "key": "Cache-Control",

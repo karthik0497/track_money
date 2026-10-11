@@ -317,16 +317,20 @@ export class NLUEngine {
       return null;
     }
 
-    // Trigger patterns for creating accounts
-    const createRegex = /\b(?:create|add|open|make)\s+(?:a\s+|an\s+)?(?:new\s+)?(?:(?:bank|credit|savings?|debit|cash|current)\s+)?(?:account|card)\b/i;
-    const directTriggers = [
-      'create account', 'add account', 'new account', 'open account', 'make account',
-      'create credit card', 'add credit card', 'new credit card',
-      'create bank account', 'add bank account', 'open bank account'
-    ];
+    // 0. If this is a spend/income transaction action, do not treat as account creation
+    const hasSpendAction = /\b(?:spent|paid|bought|purchased|recharged|sent|transfer|transferred|salary|received|credited|got paid|earned|refund)\b/i.test(clean);
+    if (hasSpendAction) {
+      return null;
+    }
 
-    const isTriggerMatch = createRegex.test(clean) || directTriggers.some(t => clean.includes(t));
-    if (!isTriggerMatch) {
+    // Trigger patterns for creating accounts:
+    // Matches: "create account...", "create hdfc credit card", "add hdfc credit card", "create a credit card for hdfc",
+    // "create sbi bank account", "open account...", "new account...", "make account...", "add credit card...", etc.
+    const isCreateTrigger = /\b(?:create|add|open|make|new|setup|set\s*up)\s+(?:a\s+|an\s+)?(?:new\s+)?(?:.*?\s+)?(?:account|credit\s*card|debit\s*card|card)\b/i.test(clean)
+      || /\b(?:new\s+account|create\s+account|add\s+account|open\s+account|make\s+account)\b/i.test(clean)
+      || /\b(?:create|add|open|make)\s+(?:a\s+|an\s+)?(?:new\s+)?(?:credit\s*card|bank\s*account|savings?\s*account)\b/i.test(clean);
+
+    if (!isCreateTrigger) {
       return null;
     }
 
@@ -370,8 +374,10 @@ export class NLUEngine {
     // Clean name candidate
     let nameCand = clean;
 
-    // 1. Remove command prefix (create account, add new account, etc.)
-    nameCand = nameCand.replace(/\b(?:please\s+)?(?:can\s+you\s+)?(?:create|add|open|make)\s+(?:a\s+|an\s+)?(?:new\s+)?(?:(?:bank|credit|savings?|debit|cash|current)\s+)?(?:account|card)\b/gi, ' ');
+    // 1. Remove command prefix
+    nameCand = nameCand.replace(/\b(?:please\s+)?(?:can\s+you\s+)?(?:create|add|open|make|setup|set\s*up)\s+(?:a\s+|an\s+)?(?:new\s+)?/gi, ' ');
+    nameCand = nameCand.replace(/\b(?:new\s+account)\b/gi, ' ');
+    nameCand = nameCand.replace(/\b(?:account|credit\s*card|bank\s*account|savings?\s*account|current\s*account|debit\s*card|card)\b/gi, ' ');
 
     // 2. Remove phrases with limit or balance keywords
     nameCand = nameCand.replace(/\b(?:with\s+)?(?:a\s+)?(?:opening\s+)?(?:balance|limit|credit\s+limit)\s*(?:of|is|:)?\s*(?:₹|rs\.?|inr)?\s*[\d,.]+(?:\s*(?:k|lakh|lac|rupees|rs))?/gi, ' ');
@@ -382,13 +388,22 @@ export class NLUEngine {
     nameCand = nameCand.replace(/\b[\d,]+(?:\.\d+)?(?:\s*(?:k|lakh|lac|rupees|rs))?\b/gi, ' ');
 
     // 4. Remove leading/trailing connecting words
-    nameCand = nameCand.replace(/^\s*(?:called|named|for|with|as|my|an?)\s+/i, ' ');
-    nameCand = nameCand.replace(/\s+(?:called|named|for|with|as)\s*$/i, ' ');
+    nameCand = nameCand.replace(/\b(?:with|of|having|called|named|for|my|an?)\b/gi, ' ');
+    nameCand = nameCand.replace(/^\s*(?:called|named|for|with|as|my|an?|of)\s+/i, ' ');
+    nameCand = nameCand.replace(/\s+(?:called|named|for|with|as|of)\s*$/i, ' ');
     nameCand = nameCand.trim();
 
     // If candidate became empty, default sensibly based on type
     if (!nameCand || nameCand.length === 0) {
       nameCand = type;
+    } else {
+      // Append sensible suffix if missing
+      const lowCand = nameCand.toLowerCase();
+      if (isCredit && !lowCand.includes('card') && !lowCand.includes('credit') && !lowCand.includes('pay later') && !lowCand.includes('loan')) {
+        nameCand += ' Credit Card';
+      } else if (!isCredit && type === 'Savings Account' && !lowCand.includes('saving') && !lowCand.includes('bank')) {
+        nameCand += ' Savings';
+      }
     }
 
     // Format title case with popular bank acronyms preserved uppercase

@@ -62,7 +62,32 @@ export class SettingsView {
           </form>
         </div>
 
-        <!-- 2. Web & Hybrid App Installation -->
+        <!-- 2. Appearance & Theme (Dark Mode / Light Mode) -->
+        <div class="card" style="margin-bottom: 1.5rem;">
+          <div class="card-header">
+            <h4>Appearance & Theme</h4>
+            <span class="badge badge-primary" id="badge-theme-mode">${localStorage.getItem('tm_theme') === 'light' ? '☀️ Light Mode' : '🌙 Dark Mode'}</span>
+          </div>
+          <p class="text-sm text-muted">Choose your preferred visual style. Track-Money features both high-contrast OLED dark mode and modern clean light mode.</p>
+          <div style="margin-top: 1rem; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <div class="radio-toggle-group">
+              <label class="radio-pill">
+                <input type="radio" name="app_theme_opt" value="dark" ${(!localStorage.getItem('tm_theme') || localStorage.getItem('tm_theme') === 'dark') ? 'checked' : ''}>
+                <span>🌙 Dark Mode</span>
+              </label>
+              <label class="radio-pill">
+                <input type="radio" name="app_theme_opt" value="light" ${localStorage.getItem('tm_theme') === 'light' ? 'checked' : ''}>
+                <span>☀️ Light Mode</span>
+              </label>
+              <label class="radio-pill">
+                <input type="radio" name="app_theme_opt" value="system" ${localStorage.getItem('tm_theme') === 'system' ? 'checked' : ''}>
+                <span>⚙️ System Auto</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Web & Hybrid App Installation -->
         <div class="card" style="margin-bottom: 1.5rem;">
           <div class="card-header">
             <h4>Install as Hybrid App</h4>
@@ -290,6 +315,18 @@ export class SettingsView {
 
     container.querySelector('#btn-switch-login-id')?.addEventListener('click', () => {
       this.app.openProfileModal();
+    });
+
+    // Theme Mode Change Handlers
+    container.querySelectorAll('input[name="app_theme_opt"]').forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        const theme = e.target.value;
+        this.app.applyTheme(theme, true);
+        const badge = container.querySelector('#badge-theme-mode');
+        if (badge) {
+          badge.textContent = theme === 'light' ? '☀️ Light Mode' : '🌙 Dark Mode';
+        }
+      });
     });
 
     // PWA Install Handlers

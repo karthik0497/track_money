@@ -26,7 +26,10 @@ class TrackMoneyApp {
   }
 
   async init() {
-    // 0. Setup PWA install listeners
+    // 0. Setup Theme Mode (Dark / Light)
+    this.initTheme();
+
+    // 1. Setup PWA install listeners
     this.setupPwaInstall();
 
     // 1. Check Profile & PIN Lock
@@ -135,6 +138,10 @@ class TrackMoneyApp {
       this.openProfileModal();
     });
 
+    document.getElementById('header-theme-btn')?.addEventListener('click', () => {
+      this.toggleTheme();
+    });
+
     document.getElementById('header-camera-btn')?.addEventListener('click', () => {
       this.openCameraScanner();
     });
@@ -147,6 +154,49 @@ class TrackMoneyApp {
       this.closeMoreSheet();
       this.triggerInstallPrompt();
     });
+  }
+
+  initTheme() {
+    const savedTheme = localStorage.getItem('tm_theme') || 'dark';
+    this.applyTheme(savedTheme, false);
+  }
+
+  toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme') || 'dark';
+    const nextTheme = current === 'dark' ? 'light' : 'dark';
+    this.applyTheme(nextTheme, true);
+  }
+
+  applyTheme(theme, showNotification = false) {
+    let resolvedTheme = theme;
+    if (theme === 'system') {
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      resolvedTheme = prefersDark ? 'dark' : 'light';
+    }
+
+    document.documentElement.setAttribute('data-theme', resolvedTheme);
+    localStorage.setItem('tm_theme', theme);
+
+    const themeBtn = document.getElementById('header-theme-btn');
+    if (themeBtn) {
+      themeBtn.innerHTML = resolvedTheme === 'light' ? '🌙' : '☀️';
+      themeBtn.title = resolvedTheme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode';
+    }
+
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+    if (metaTheme) {
+      metaTheme.setAttribute('content', resolvedTheme === 'light' ? '#f4f6fa' : '#080b12');
+    }
+
+    // Update settings badge if settings view is open
+    const badge = document.getElementById('badge-theme-mode');
+    if (badge) {
+      badge.textContent = resolvedTheme === 'light' ? '☀️ Light Mode' : '🌙 Dark Mode';
+    }
+
+    if (showNotification) {
+      this.showToast(`Switched to ${resolvedTheme === 'light' ? '☀️ Light' : '🌙 Dark'} Mode`);
+    }
   }
 
   toggleMoreSheet() {
@@ -509,9 +559,9 @@ class TrackMoneyApp {
     }
   }
 
-  openAddAccountModal(preferredCategory = null, prefill = null) {
+  openAddAccountModal(preferredCategory = null, prefill = null, editAccountId = null) {
     if (this.viewInstances?.accounts) {
-      this.viewInstances.accounts.openAddAccountModal(preferredCategory, prefill);
+      this.viewInstances.accounts.openAddAccountModal(preferredCategory, prefill, editAccountId);
     }
   }
 

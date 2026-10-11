@@ -23,6 +23,14 @@
   <link rel="stylesheet" href="css/dashboard.css">
   <link rel="stylesheet" href="css/assistant.css">
   <link rel="stylesheet" href="css/accounts.css">
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('tm_theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      const metaTheme = document.querySelector('meta[name="theme-color"]');
+      if (metaTheme) metaTheme.setAttribute('content', savedTheme === 'light' ? '#f4f6fa' : '#080b12');
+    })();
+  </script>
 </head>
 <body>
   <div id="app-root">
@@ -43,6 +51,9 @@
           <span class="profile-name-mini" id="header-login-name">User</span>
         </button>
         <span id="header-net-pill" class="pill pill-success text-xs">Net: ₹ 0</span>
+        <button class="btn btn-icon" id="header-theme-btn" title="Toggle Light / Dark Mode">
+          ☀️
+        </button>
         <button class="btn btn-icon" id="header-camera-btn" title="Scan Receipt with Camera">
           📷
         </button>

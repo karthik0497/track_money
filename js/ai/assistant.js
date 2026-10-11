@@ -35,9 +35,9 @@ export class AssistantCoordinator {
     // Parse input using NLU engine
     const nluResult = NLUEngine.parse(text, accounts, categories);
 
-    // 0. Create Account Intent
+    // 0. Create Account Intent: Directly create and save to local IndexedDB
     if (nluResult.intent === 'create_account') {
-      return await this.prepareAccountConfirmation(nluResult, text);
+      return await this.createAccountDirectly(nluResult, text);
     }
 
     // 1. Query Intent: Answer questions from DB
@@ -131,10 +131,10 @@ export class AssistantCoordinator {
 
     // Check if user confirmed or rejected
     if (this.pendingAction && this.pendingAction.type === 'awaiting_confirmation') {
-      if (['yes', 'confirm', 'yup', 'correct', 'ok', 'save', 'add', 'sure', 'create'].includes(clean)) {
+      if (['yes', 'confirm', 'yup', 'correct', 'ok', 'okay', 'save', 'add', 'sure', 'create', 'create it', 'yes please', 'do it', 'proceed'].includes(clean)) {
         return await this.executeConfirmedAction();
       }
-      if (['no', 'cancel', 'stop', 'edit', 'change', 'nevermind'].includes(clean)) {
+      if (['no', 'cancel', 'stop', 'edit', 'change', 'nevermind', 'dont'].includes(clean)) {
         const isAcc = this.pendingAction.actionType === 'create_account';
         const cancelledMsg = {
           sender: 'ai',
@@ -224,6 +224,82 @@ export class AssistantCoordinator {
     };
     this.conversationHistory.push(msg);
     return msg;
+  }
+
+  async createAccountDirectly(nluResult, rawUtterance) {
+    const isCredit = nluResult.isCredit;
+
+    // Check if duplicate account name exists
+    const existingAccounts = await this.storage.getAll('accounts');
+    const duplicate = existingAccounts.find(
+      a => (a.name || '').toLowerCase().trim() === (nluResult.name || '').toLowerCase().trim()
+    );
+
+    if (duplicate) {
+      const msg = {
+        sender: 'ai',
+        text: `⚠️ An account named **"${duplicate.name}"** already exists in your records!\n\n` +
+              `• Current ${duplicate.category === 'credit' ? 'Outstanding' : 'Balance'}: **${AccountModel.formatCurrency(duplicate.category === 'credit' ? duplicate.currentOutstanding : duplicate.currentBalance)}**\n` +
+              `• If you want another card, specify a distinct name like *"${duplicate.name} 2"* or *"${duplicate.name} Coral"*.`,
+        type: 'text',
+        timestamp: Date.now()
+      };
+      this.conversationHistory.push(msg);
+      return msg;
+    }
+
+    const audit = await this.storage.logAiAudit({
+      originalMessage: rawUtterance,
+      interpretedAction: {
+        action: 'create_account',
+        name: nluResult.name,
+        category: nluResult.accountCategory,
+        accountType: nluResult.accountType,
+        amount: nluResult.amount
+      },
+      confirmationStatus: 'confirmed'
+    });
+
+    const accountData = {
+      name: nluResult.name,
+      category: nluResult.accountCategory,
+      type: nluResult.accountType,
+      openingBalance: isCredit ? 0 : (nluResult.amount || 0),
+      creditLimit: isCredit ? (nluResult.amount || 0) : 0,
+      openingOutstanding: 0,
+      currentOutstanding: 0,
+      availableCredit: isCredit ? (nluResult.amount || 0) : 0,
+      billingCycle: isCredit ? '1st of month' : '',
+      dueDate: isCredit ? '20th of month' : '',
+      description: `Created via AI Assistant: "${rawUtterance}"`,
+      aiAuditId: audit.id
+    };
+
+    const newAccount = AccountModel.create(accountData);
+    await this.storage.put('accounts', newAccount);
+    await this.storage.updateAiAuditStatus(audit.id, 'confirmed', newAccount.id);
+
+    // Refresh UI views immediately
+    if (this.onUpdate) {
+      this.onUpdate();
+    }
+
+    const limitOrBalText = newAccount.category === 'credit'
+      ? (newAccount.creditLimit > 0 ? `Credit Limit: **${AccountModel.formatCurrency(newAccount.creditLimit)}**` : 'Credit Limit: **₹ 0** (tap Edit to set limit)')
+      : `Opening Balance: **${AccountModel.formatCurrency(newAccount.openingBalance)}**`;
+
+    const successMsg = {
+      sender: 'ai',
+      text: `✅ **Account Created Successfully!**\n\n` +
+            `Created **${newAccount.name}** (${newAccount.type}).\n` +
+            `• ${limitOrBalText}\n` +
+            `• Saved directly to your local offline database.`,
+      type: 'account_created',
+      data: newAccount,
+      timestamp: Date.now()
+    };
+    this.conversationHistory.push(successMsg);
+    return successMsg;
   }
 
   async prepareAccountConfirmation(nluResult, rawUtterance) {
