@@ -492,12 +492,15 @@ html, body {
 [data-theme="light"] .btn-outline {
   border-color: #cbd5e1;
   color: var(--text-secondary);
+  background: #ffffff;
 }
 
 [data-theme="light"] .btn-outline:hover {
   border-color: var(--color-primary);
-  background: rgba(99, 102, 241, 0.06);
+  background: rgba(99, 102, 241, 0.08);
+  color: var(--color-primary);
 }
+
 
 [data-theme="light"] .btn-icon {
   background: #f1f5f9;
@@ -634,5 +637,40 @@ html, body {
   background: #f8fafc;
   border-color: rgba(15, 23, 42, 0.06);
 }
+
+[data-theme="light"] .report-period-bar {
+  background: #ffffff !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  box-shadow: var(--shadow-sm);
+}
+
+[data-theme="light"] .report-stat-card,
+[data-theme="light"] .pie-chart-card {
+  background: #ffffff !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  box-shadow: var(--shadow-sm);
+}
+
+[data-theme="light"] .legend-item {
+  background: #f8fafc !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  color: var(--text-main) !important;
+}
+
+[data-theme="light"] .mini-account-row {
+  background: #f8fafc !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+}
+
+[data-theme="light"] .tx-item {
+  background: #f8fafc !important;
+  border: 1px solid rgba(15, 23, 42, 0.06) !important;
+}
+
+[data-theme="light"] .tx-item:hover,
+[data-theme="light"] .mini-account-row:hover {
+  background: #f1f5f9 !important;
+}
+
 
 

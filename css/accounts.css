@@ -443,3 +443,64 @@
   font-family: monospace;
   margin: 6px 0;
 }
+
+/* ==========================================================
+   Accounts Light Mode Styles
+   ========================================================== */
+[data-theme="light"] .summary-chip {
+  background: #f8fafc;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] .detail-banner.banner-debit {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+[data-theme="light"] .detail-banner.banner-credit {
+  background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);
+  border: 1px solid rgba(244, 63, 94, 0.3);
+}
+
+[data-theme="light"] .detail-banner .banner-amount {
+  color: #0f172a;
+}
+
+[data-theme="light"] .detail-banner .detail-meta-row {
+  color: #475569;
+}
+
+[data-theme="light"] .recurring-item {
+  background: #f8fafc;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] .recurring-item:hover {
+  background: #f1f5f9;
+}
+
+[data-theme="light"] .rec-title {
+  color: #0f172a;
+}
+
+[data-theme="light"] .subcat-chip {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+}
+
+[data-theme="light"] .subcat-chip:hover {
+  background: #e2e8f0;
+}
+
+[data-theme="light"] .audit-item {
+  background: #f8fafc;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] .audit-interpreted pre {
+  background: #f1f5f9;
+  color: #312e81;
+  border: 1px solid #cbd5e1;
+}
+

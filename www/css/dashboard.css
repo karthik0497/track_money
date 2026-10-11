@@ -377,3 +377,111 @@
   color: var(--text-muted);
   font-size: 0.85rem;
 }
+
+/* ==========================================================
+   Dashboard Light Mode Styles
+   ========================================================== */
+[data-theme="light"] .hero-net-card {
+  box-shadow: 0 6px 24px rgba(15, 23, 42, 0.06);
+  border: 1px solid rgba(99, 102, 241, 0.16);
+}
+
+[data-theme="light"] .hero-positive {
+  background: linear-gradient(135deg, #ffffff 0%, #f5f7ff 45%, #ecfdf5 100%);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+[data-theme="light"] .hero-negative {
+  background: linear-gradient(135deg, #ffffff 0%, #f5f7ff 45%, #fff1f2 100%);
+  border-color: rgba(244, 63, 94, 0.25);
+}
+
+[data-theme="light"] .hero-label {
+  color: #4f46e5;
+}
+
+[data-theme="light"] .hero-badge {
+  background: rgba(99, 102, 241, 0.1);
+  color: #4f46e5;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+[data-theme="light"] .hero-amount {
+  color: #0f172a;
+  text-shadow: none;
+}
+
+[data-theme="light"] .hero-subtext {
+  color: #64748b;
+}
+
+[data-theme="light"] .hero-grid {
+  border-top-color: rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] .hero-stat-item {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+[data-theme="light"] .hero-stat-item:hover {
+  background: #f8fafc;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] .stat-title {
+  color: #64748b;
+}
+
+[data-theme="light"] .stat-value {
+  color: #0f172a;
+}
+
+[data-theme="light"] .stat-caption {
+  color: #94a3b8;
+}
+
+[data-theme="light"] .mini-account-row {
+  background: #f8fafc;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] .mini-account-row:hover {
+  background: #f1f5f9;
+}
+
+[data-theme="light"] .acc-bal {
+  color: #0f172a;
+}
+
+[data-theme="light"] .tx-item {
+  background: #f8fafc;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+[data-theme="light"] .tx-item:hover {
+  background: #f1f5f9;
+}
+
+[data-theme="light"] .tx-title {
+  color: #0f172a;
+}
+
+[data-theme="light"] .tx-amount {
+  color: #0f172a;
+}
+
+[data-theme="light"] .tx-acc-tag {
+  color: #64748b;
+}
+
+[data-theme="light"] .bill-item {
+  background: #fffbeb;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+[data-theme="light"] .empty-placeholder {
+  color: #64748b;
+}
+

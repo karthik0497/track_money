@@ -1157,3 +1157,175 @@
   gap: 4px;
 }
 
+/* ==========================================================
+   Components Light Mode Styles
+   ========================================================== */
+[data-theme="light"] .report-period-bar {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: var(--shadow-sm);
+}
+
+[data-theme="light"] .report-period-bar .btn-outline {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #334155;
+}
+
+[data-theme="light"] .report-period-bar .btn-outline:hover {
+  background: #f1f5f9;
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+[data-theme="light"] .report-period-bar select.form-select {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+[data-theme="light"] .report-stat-card {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: var(--shadow-sm);
+}
+
+[data-theme="light"] .pie-chart-card {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: var(--shadow-sm);
+}
+
+[data-theme="light"] .pie-svg-wrapper svg {
+  filter: drop-shadow(0 2px 8px rgba(15, 23, 42, 0.08));
+}
+
+[data-theme="light"] .legend-item {
+  background: #f8fafc;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  color: var(--text-main);
+}
+
+[data-theme="light"] .legend-item:hover {
+  background: #f1f5f9;
+}
+
+[data-theme="light"] .cat-breakdown-row {
+  border-bottom-color: rgba(15, 23, 42, 0.06);
+}
+
+[data-theme="light"] .cat-breakdown-row:hover {
+  background: #f8fafc;
+}
+
+[data-theme="light"] .report-table th,
+[data-theme="light"] .report-table td {
+  border-bottom-color: rgba(15, 23, 42, 0.06);
+}
+
+[data-theme="light"] .report-row-highlight {
+  background: rgba(16, 185, 129, 0.08);
+}
+
+[data-theme="light"] .report-row-total {
+  background: rgba(99, 102, 241, 0.08);
+}
+
+[data-theme="light"] .account-modal-card {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.15);
+}
+
+[data-theme="light"] .account-modal-card .modal-header {
+  border-bottom-color: rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] .modal-tabs-header {
+  background: #ffffff;
+  border-bottom-color: rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] .category-segmented-control {
+  background: #f1f5f9;
+  border-color: rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] .cat-seg-btn {
+  color: #64748b;
+}
+
+[data-theme="light"] .cat-seg-btn.active {
+  background: #ffffff;
+  color: var(--color-primary);
+  border-color: rgba(99, 102, 241, 0.25);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] .account-modal-card .modal-footer {
+  background: #ffffff;
+  border-top-color: rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] .form-card-section {
+  background: #f8fafc;
+  border-color: rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] .section-label {
+  color: #4f46e5;
+}
+
+[data-theme="light"] .radio-pill {
+  background: #f8fafc;
+  border-color: rgba(15, 23, 42, 0.1);
+  color: var(--text-secondary);
+}
+
+[data-theme="light"] .radio-pill:has(input:checked) {
+  border-color: var(--color-primary);
+  background: rgba(79, 70, 229, 0.08);
+  color: var(--color-primary);
+}
+
+[data-theme="light"] .btn-item-action:hover {
+  background: rgba(15, 23, 42, 0.06);
+  color: var(--text-main);
+}
+
+[data-theme="light"] .camera-scanner-card {
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.12);
+}
+
+[data-theme="light"] .pin-lock-overlay {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+[data-theme="light"] .more-sheet-card {
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.1);
+  box-shadow: 0 -10px 40px rgba(15, 23, 42, 0.12);
+}
+
+[data-theme="light"] .more-sheet-header {
+  border-bottom-color: rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] .more-menu-item {
+  background: #f8fafc;
+  border-color: rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] .more-menu-item:hover,
+[data-theme="light"] .more-menu-item:active {
+  background: #eef2ff;
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+[data-theme="light"] .util-progress-bar {
+  background: #e2e8f0;
+}
+
+
