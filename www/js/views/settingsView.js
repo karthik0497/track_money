@@ -226,24 +226,31 @@ export class SettingsView {
         <!-- Data Backup & Portability -->
         <div class="card" style="margin-bottom: 1.5rem;">
           <div class="card-header">
-            <h4>Data Backup & Portability</h4>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="text-lg">💾</span>
+              <h4>Data Backup, Restore & Export</h4>
+            </div>
             <span class="badge badge-subtle">100% Local</span>
           </div>
-          <p class="text-sm text-muted">All your accounts, transactions, and categories are saved locally on this device. You can export a full backup or restore your data anytime.</p>
+          <p class="text-sm text-muted">All your accounts, transactions, and categories are saved locally on this device. You can export a full backup, download CSV spreadsheets, or restore data anytime.</p>
 
-          <div class="backup-actions-row" style="margin-top: 1rem; display: flex; gap: 12px; flex-wrap: wrap;">
+          <div class="backup-actions-grid" style="margin-top: 1rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;">
             <button class="btn btn-outline" id="settings-export-json">
-              💾 Download Full JSON Backup
+              💾 Full JSON Backup
             </button>
-            <button class="btn btn-outline" id="settings-export-csv">
-              📄 Export Transactions CSV
-            </button>
-            <label class="btn btn-primary" style="cursor: pointer;">
-              📂 Restore Backup from JSON
+            <label class="btn btn-primary" style="cursor: pointer; margin: 0; text-align: center;">
+              📂 Restore JSON Backup
               <input type="file" id="input-restore-json" accept=".json" style="display: none;">
             </label>
+            <button class="btn btn-outline" id="settings-export-csv">
+              📄 Export All CSV
+            </button>
+            <button class="btn btn-outline" id="settings-export-month-csv">
+              📥 Export This Month CSV
+            </button>
           </div>
         </div>
+
 
         <!-- Danger Zone: Reset All Data -->
         <div class="card" style="margin-bottom: 1.5rem; border: 1.5px solid rgba(239, 68, 68, 0.35); background: rgba(239, 68, 68, 0.03);">
@@ -501,7 +508,44 @@ export class SettingsView {
       this.app.showToast('CSV transactions downloaded.');
     });
 
+    // Month CSV Export
+    container.querySelector('#settings-export-month-csv')?.addEventListener('click', async () => {
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth();
+      const report = await this.storage.getMonthlyReport(currentYear, currentMonth);
+      if (!report.transactions || report.transactions.length === 0) {
+        this.app.showToast('No transactions found for current month.');
+        return;
+      }
+      const accounts = await this.storage.getAll('accounts');
+      const accMap = new Map(accounts.map(a => [a.id, a.name]));
+      const headers = ['Transaction ID', 'Date', 'Type', 'Account', 'Category', 'Subcategory', 'Amount', 'Description', 'Payment Method', 'Notes'];
+      const rows = report.transactions.map(t => [
+        t.id,
+        t.date,
+        t.type,
+        `"${(accMap.get(t.accountId) || t.accountName || t.accountId || '').replace(/"/g, '""')}"`,
+        `"${(t.category || '').replace(/"/g, '""')}"`,
+        `"${(t.subcategory || '').replace(/"/g, '""')}"`,
+        t.amount,
+        `"${(t.description || '').replace(/"/g, '""')}"`,
+        `"${(t.paymentMethod || '').replace(/"/g, '""')}"`,
+        `"${(t.notes || '').replace(/"/g, '""')}"`
+      ]);
+      const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `track_money_${currentYear}_${String(currentMonth + 1).padStart(2, '0')}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      this.app.showToast('Current month CSV transactions downloaded.');
+    });
+
     // JSON Restore
+
     container.querySelector('#input-restore-json')?.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;

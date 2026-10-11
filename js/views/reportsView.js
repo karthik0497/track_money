@@ -59,28 +59,14 @@ export class ReportsView {
 
     container.innerHTML = `
       <div class="reports-container fade-in">
-        <!-- Page Header & Global Backup/Export Actions -->
+        <!-- Page Header -->
         <div class="page-header">
           <div>
             <h2>Financial Reports & Analytics</h2>
-            <p class="text-sm text-muted">Monthly expense breakdown, interactive category charts, and data portability</p>
-          </div>
-          <div class="header-actions" style="display: flex; gap: 8px; flex-wrap: wrap;">
-            <button class="btn btn-outline btn-sm" id="btn-export-month-csv" title="Export this month's transactions to CSV">
-              📥 Export Month CSV
-            </button>
-            <button class="btn btn-outline btn-sm" id="btn-export-all-csv" title="Export all transactions across all time">
-              📄 Export All CSV
-            </button>
-            <button class="btn btn-outline btn-sm" id="btn-download-json" title="Download complete local backup of all stores">
-              💾 Full JSON Backup
-            </button>
-            <label class="btn btn-primary btn-sm" style="cursor: pointer; margin: 0;" title="Restore backup from a JSON file">
-              📂 Restore Backup
-              <input type="file" id="input-report-restore-json" accept=".json" style="display: none;">
-            </label>
+            <p class="text-sm text-muted">Monthly expense breakdown, interactive category charts, and spending trends</p>
           </div>
         </div>
+
 
         <!-- Month & Year Selector Toolbar -->
         <div class="report-period-bar">
@@ -108,7 +94,7 @@ export class ReportsView {
             </button>
           </div>
 
-          <div style="display: flex; align-items: center; gap: 8px;">
+          <div class="report-period-meta">
             <span class="badge badge-subtle">
               ${report.txCount} Transactions in ${report.monthName}
             </span>
@@ -473,49 +459,7 @@ export class ReportsView {
       });
     });
 
-    // Export Month CSV
-    container.querySelector('#btn-export-month-csv')?.addEventListener('click', () => {
-      this.exportTransactionsToCSV(report.transactions, `track_money_${report.year}_${String(report.month + 1).padStart(2, '0')}.csv`);
-    });
-
-    // Export All CSV
-    container.querySelector('#btn-export-all-csv')?.addEventListener('click', () => {
-      this.exportTransactionsToCSV(allTransactions, `track_money_all_transactions_${new Date().toISOString().split('T')[0]}.csv`);
-    });
-
-    // Download Full JSON Backup
-    container.querySelector('#btn-download-json')?.addEventListener('click', async () => {
-      const data = await this.storage.exportAllData();
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `track_money_backup_${new Date().toISOString().split('T')[0]}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      this.app.showToast('Full JSON backup downloaded successfully.');
-    });
-
-    // Restore Backup from JSON input in Reports view
-    const restoreInput = container.querySelector('#input-report-restore-json');
-    restoreInput?.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        try {
-          const json = JSON.parse(event.target.result);
-          await this.storage.importData(json);
-          this.app.showToast('Backup restored successfully!');
-          await this.render(container);
-          this.app.updateHeaderSummary();
-        } catch (err) {
-          alert('Failed to restore backup: ' + err.message);
-        }
-      };
-      reader.readAsText(file);
-    });
-  }
+    }
 
   exportTransactionsToCSV(transactions, filename) {
     if (!transactions || transactions.length === 0) {

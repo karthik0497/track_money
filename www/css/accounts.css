@@ -14,13 +14,13 @@
     gap: 6px;
   }
   .summary-chip {
-    padding: 8px 8px;
+    padding: 8px 6px;
   }
   .chip-val {
-    font-size: 0.92rem;
+    font-size: 0.88rem;
   }
   .chip-label {
-    font-size: 0.68rem;
+    font-size: 0.65rem;
   }
   .accounts-card-grid {
     grid-template-columns: 1fr;
@@ -30,21 +30,91 @@
     padding: 1rem;
   }
   .card-quick-actions {
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 6px;
   }
   .card-quick-actions .btn {
-    flex: 1;
-    min-height: 38px;
+    min-height: 42px;
+    font-size: 0.78rem;
+    padding: 6px 8px;
     justify-content: center;
   }
   .detail-banner {
     padding: 1rem;
   }
+  .detail-stat-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .detail-actions-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
   .detail-actions-bar .btn {
-    flex: 1;
-    min-height: 40px;
+    min-height: 42px;
+    font-size: 0.8rem;
     justify-content: center;
+  }
+
+  /* Search & Filter Mobile Handling */
+  .search-box-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .search-input-wrapper {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+  #btn-toggle-filters {
+    flex: 1;
+    min-height: 42px;
+  }
+  #btn-reset-filters {
+    min-height: 42px;
+    padding: 6px 12px;
+  }
+  .filter-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .filtered-totals-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .filtered-chips {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  /* Categories & Recurring Mobile */
+  .categories-tree-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .recurring-item {
+    padding: 10px;
+    gap: 8px;
+  }
+  .rec-icon-box {
+    width: 36px;
+    height: 36px;
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .accounts-summary-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .card-quick-actions {
+    grid-template-columns: 1fr;
+  }
+  .detail-actions-bar {
+    grid-template-columns: 1fr;
   }
 }
 

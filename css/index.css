@@ -317,10 +317,23 @@ html, body {
   gap: 12px;
 }
 
+@media (max-width: 767px) {
+  #app-root {
+    max-width: 100% !important;
+    width: 100% !important;
+    height: 100% !important;
+    height: 100dvh !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+}
+
 @media (max-width: 480px) {
   .app-header {
-    padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
-    padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+    padding-left: max(0.65rem, env(safe-area-inset-left, 0px));
+    padding-right: max(0.65rem, env(safe-area-inset-right, 0px));
     height: calc(56px + env(safe-area-inset-top, 0px));
     min-height: calc(56px + env(safe-area-inset-top, 0px));
     padding-top: env(safe-area-inset-top, 0px);
@@ -333,61 +346,75 @@ html, body {
     height: 30px;
   }
   .header-right {
-    gap: 5px;
+    gap: 4px;
   }
   .hide-on-mobile {
     display: none !important;
   }
   .header-profile-btn {
     padding: 3px 6px;
-    max-width: 90px;
+    max-width: 80px;
     font-size: 0.72rem;
+  }
+  .profile-name-mini {
+    max-width: 48px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   #header-net-pill {
     padding: 2px 6px;
-    font-size: 0.7rem;
+    font-size: 0.68rem;
+    max-width: 95px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .btn-icon {
-    width: 36px;
-    height: 36px;
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
     font-size: 1rem;
-    min-height: 36px;
+    min-height: 38px;
+    flex-shrink: 0;
   }
   .app-main {
-    padding: 0.75rem 0.85rem calc(76px + env(safe-area-inset-bottom, 0px)) 0.85rem;
+    padding: 0.75rem 0.75rem calc(76px + env(safe-area-inset-bottom, 16px)) 0.75rem;
+    overflow-x: hidden;
   }
   .bottom-nav {
-    height: calc(62px + env(safe-area-inset-bottom, 0px));
-    padding: 0 0.25rem max(6px, env(safe-area-inset-bottom, 0px)) 0.25rem;
+    height: calc(60px + env(safe-area-inset-bottom, 0px));
+    padding: 0 0.15rem max(6px, env(safe-area-inset-bottom, 0px)) 0.15rem;
   }
   .nav-item {
-    padding: 4px 2px;
+    padding: 4px 1px;
     min-height: 48px;
   }
   .nav-item .nav-icon {
-    font-size: 1.25rem;
+    font-size: 1.2rem;
   }
   .nav-item .nav-label {
-    font-size: 0.65rem;
+    font-size: 0.62rem;
     font-weight: 600;
   }
   .grid-2-col {
     grid-template-columns: 1fr;
-    gap: 10px;
+    gap: 8px;
   }
 
   .page-header h2 {
-    font-size: 1.35rem;
+    font-size: 1.25rem;
   }
   .page-header {
-    margin-bottom: 1rem;
+    margin-bottom: 0.85rem;
   }
   .tabs-segmented {
-    margin-bottom: 1rem;
+    margin-bottom: 0.85rem;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
     -ms-overflow-style: none;
+    padding: 3px;
   }
   .tabs-segmented::-webkit-scrollbar {
     display: none;
@@ -395,11 +422,32 @@ html, body {
   .tab-btn {
     white-space: nowrap;
     padding: 8px 10px;
-    font-size: 0.78rem;
-    min-height: 38px;
+    font-size: 0.76rem;
+    min-height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+  .card {
+    padding: 1rem;
+    border-radius: var(--radius-md);
+  }
+}
+
+/* Extra small screens (<= 360px) */
+@media (max-width: 360px) {
+  .brand-title {
+    display: none;
+  }
+  .profile-name-mini {
+    display: none;
+  }
+  .header-profile-btn {
+    max-width: 36px;
+    padding: 3px;
+  }
+  .nav-item .nav-label {
+    font-size: 0.58rem;
   }
 }
 

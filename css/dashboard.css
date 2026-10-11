@@ -124,24 +124,8 @@
   margin-bottom: 1.25rem;
 }
 
-@media (max-width: 640px) {
-  .stats-row {
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-    gap: 8px;
-  }
-}
-
 .stat-card {
   padding: 1rem;
-}
-
-@media (max-width: 480px) {
-  .stat-card {
-    padding: 0.75rem 0.85rem;
-  }
-  .stat-number {
-    font-size: 1.15rem;
-  }
 }
 
 .card-header-mini {
@@ -376,6 +360,133 @@
   text-align: center;
   color: var(--text-muted);
   font-size: 0.85rem;
+}
+
+/* ==========================================================
+   Dashboard Mobile Responsive Optimizations
+   ========================================================== */
+@media (max-width: 600px) {
+  .hero-net-card {
+    padding: 1.15rem 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .hero-amount {
+    font-size: clamp(1.8rem, 7vw, 2.35rem);
+  }
+
+  .hero-grid {
+    gap: 8px;
+    padding-top: 0.75rem;
+  }
+
+  .hero-stat-item {
+    padding: 8px 10px;
+  }
+
+  .stat-value {
+    font-size: 1.05rem;
+  }
+
+  .stat-caption {
+    font-size: 0.62rem;
+  }
+
+  .quick-actions-bar {
+    gap: 6px;
+  }
+
+  .quick-actions-bar .btn {
+    flex: 1 1 95px;
+    padding: 8px 4px;
+    font-size: 0.76rem;
+    min-height: 44px;
+  }
+
+  .stats-row {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+
+  .stat-card {
+    padding: 8px 6px;
+  }
+
+  .card-header-mini {
+    font-size: 0.68rem;
+    margin-bottom: 4px;
+  }
+
+  .stat-number {
+    font-size: 1.05rem;
+  }
+
+  .stat-trend {
+    font-size: 0.64rem;
+  }
+
+  .donut-chart-layout {
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .chart-legend {
+    width: 100%;
+  }
+
+  .credit-limits-row {
+    gap: 6px;
+  }
+
+  .credit-limits-row .font-bold {
+    font-size: 0.82rem;
+  }
+
+  .bill-item {
+    padding: 8px 10px;
+    min-height: 48px;
+  }
+
+  .mini-account-row {
+    padding: 8px 10px;
+    min-height: 48px;
+  }
+
+  .tx-item {
+    padding: 8px 10px;
+    min-height: 52px;
+    gap: 8px;
+  }
+
+  .tx-icon-circle {
+    width: 32px;
+    height: 32px;
+    font-size: 0.85rem;
+  }
+
+  .tx-title {
+    font-size: 0.85rem;
+  }
+
+  .tx-amount {
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .stats-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .quick-actions-bar .btn {
+    flex: 1 1 100%;
+  }
+
+  .hero-amount {
+    font-size: 1.65rem;
+  }
 }
 
 /* ==========================================================

@@ -391,24 +391,57 @@
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 600px) {
   .ai-fab {
-    bottom: 74px;
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
     right: 16px;
-    width: 52px;
-    height: 52px;
+    width: 54px;
+    height: 54px;
+  }
+  .ai-drawer-card {
+    max-height: 88vh;
+    max-height: 88dvh;
+    width: 100%;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
   }
   .ai-drawer-header {
     padding: 0.85rem 1rem;
   }
   .ai-suggestions-carousel {
     padding: 6px 1rem;
+    gap: 6px;
+  }
+  .ai-chip {
+    padding: 6px 10px;
+    font-size: 0.74rem;
+    min-height: 32px;
+    display: inline-flex;
+    align-items: center;
   }
   .ai-chat-messages {
     padding: 0.85rem 1rem;
   }
+  .chat-msg {
+    max-width: 92%;
+  }
+  .confirm-actions {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .confirm-actions .btn {
+    flex: 1 1 110px;
+    min-height: 40px;
+  }
   .ai-input-bar {
-    padding: 0.65rem 1rem;
+    padding: 0.65rem 1rem max(0.65rem, env(safe-area-inset-bottom, 8px)) 1rem;
+    gap: 6px;
+  }
+  .btn-voice-toggle {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
   }
 }
 
