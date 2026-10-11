@@ -346,29 +346,10 @@ html, body {
     height: 30px;
   }
   .header-right {
-    gap: 4px;
+    gap: 6px;
   }
   .hide-on-mobile {
     display: none !important;
-  }
-  .header-profile-btn {
-    padding: 3px 6px;
-    max-width: 80px;
-    font-size: 0.72rem;
-  }
-  .profile-name-mini {
-    max-width: 48px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  #header-net-pill {
-    padding: 2px 6px;
-    font-size: 0.68rem;
-    max-width: 95px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
   .btn-icon {
     width: 38px;
@@ -437,14 +418,7 @@ html, body {
 /* Extra small screens (<= 360px) */
 @media (max-width: 360px) {
   .brand-title {
-    display: none;
-  }
-  .profile-name-mini {
-    display: none;
-  }
-  .header-profile-btn {
-    max-width: 36px;
-    padding: 3px;
+    font-size: 0.95rem;
   }
   .nav-item .nav-label {
     font-size: 0.58rem;
