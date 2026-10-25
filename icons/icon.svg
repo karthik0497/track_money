@@ -1,50 +1,73 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
+    <!-- Background Gradient: Deep Obsidian Black with Subtle Gold Warmth -->
     <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0f172a" />
-      <stop offset="50%" stop-color="#1e1b4b" />
-      <stop offset="100%" stop-color="#090d16" />
+      <stop offset="0%" stop-color="#141418" />
+      <stop offset="50%" stop-color="#0a0a0d" />
+      <stop offset="100%" stop-color="#050507" />
     </linearGradient>
-    <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#6366f1" />
-      <stop offset="50%" stop-color="#8b5cf6" />
-      <stop offset="100%" stop-color="#10b981" />
+
+    <!-- Vibrant Yellow Gold Primary Gradient -->
+    <linearGradient id="yellowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="35%" stop-color="#facc15" />
+      <stop offset="70%" stop-color="#eab308" />
+      <stop offset="100%" stop-color="#ca8a04" />
     </linearGradient>
-    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#10b981" stop-opacity="0.8" />
-      <stop offset="100%" stop-color="#6366f1" stop-opacity="0.2" />
+
+    <!-- Card Background Gradient -->
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1c1c22" />
+      <stop offset="50%" stop-color="#121216" />
+      <stop offset="100%" stop-color="#0a0a0d" />
     </linearGradient>
-    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
-      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#6366f1" flood-opacity="0.4"/>
+
+    <!-- Golden Glow Drop Shadow Filter -->
+    <filter id="yellowGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="18" flood-color="#eab308" flood-opacity="0.45"/>
+    </filter>
+
+    <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="22" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
     </filter>
   </defs>
-  
-  <!-- App Background -->
+
+  <!-- App Rounded Squircle Container -->
   <rect width="512" height="512" rx="128" fill="url(#bgGrad)" />
-  <circle cx="256" cy="256" r="190" stroke="url(#brandGrad)" stroke-width="6" fill="none" opacity="0.35" />
-  
-  <!-- Outer Glow Card -->
-  <rect x="96" y="140" width="320" height="200" rx="28" fill="#1e293b" stroke="url(#brandGrad)" stroke-width="4" filter="url(#shadow)"/>
-  
-  <!-- Card Chip -->
-  <rect x="136" y="180" width="50" height="38" rx="8" fill="#f59e0b" opacity="0.9" />
-  <line x1="136" y1="199" x2="186" y2="199" stroke="#b45309" stroke-width="2"/>
-  <line x1="161" y1="180" x2="161" y2="218" stroke="#b45309" stroke-width="2"/>
 
-  <!-- AI Sparkles -->
-  <path d="M360 170 L365 185 L380 190 L365 195 L360 210 L355 195 L340 190 L355 185 Z" fill="#10b981" />
-  <path d="M385 215 L388 225 L398 228 L388 231 L385 241 L382 231 L372 228 L382 225 Z" fill="#6366f1" />
+  <!-- Ambient Golden Glow in Center -->
+  <circle cx="256" cy="240" r="160" fill="url(#yellowGrad)" opacity="0.12" filter="url(#softGlow)" />
 
-  <!-- Rupee Symbol -->
-  <text x="256" y="275" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="78" fill="#ffffff" text-anchor="middle">₹</text>
+  <!-- Outer Orbit Ring -->
+  <circle cx="256" cy="256" r="192" stroke="url(#yellowGrad)" stroke-width="4" stroke-dasharray="14 10" fill="none" opacity="0.35" />
 
-  <!-- Status Dots / Waves -->
-  <circle cx="150" cy="300" r="6" fill="#10b981" />
-  <circle cx="170" cy="300" r="6" fill="#6366f1" />
-  <circle cx="190" cy="300" r="6" fill="#f43f5e" />
-  
-  <!-- AI Signal Arc -->
-  <path d="M236 385 Q256 370 276 385" stroke="#10b981" stroke-width="5" stroke-linecap="round" fill="none" />
-  <path d="M220 405 Q256 380 292 405" stroke="#6366f1" stroke-width="5" stroke-linecap="round" fill="none" />
-  <path d="M204 425 Q256 390 308 425" stroke="#8b5cf6" stroke-width="5" stroke-linecap="round" fill="none" />
+  <!-- Obsidian Glass Financial Card with Gold Border -->
+  <rect x="96" y="136" width="320" height="204" rx="28" fill="url(#cardGrad)" stroke="url(#yellowGrad)" stroke-width="4.5" filter="url(#yellowGlow)"/>
+
+  <!-- Card Top Gloss Highlight -->
+  <path d="M98 164 Q98 138 124 138 L388 138 Q414 138 414 164 L414 185 Q256 160 98 190 Z" fill="#ffffff" opacity="0.06" />
+
+  <!-- Metallic Gold Microchip -->
+  <rect x="136" y="174" width="52" height="40" rx="8" fill="url(#yellowGrad)" stroke="#ca8a04" stroke-width="1.5" />
+  <line x1="136" y1="194" x2="188" y2="194" stroke="#854d0e" stroke-width="2"/>
+  <line x1="162" y1="174" x2="162" y2="214" stroke="#854d0e" stroke-width="2"/>
+  <circle cx="162" cy="194" r="4" fill="#fef08a" />
+
+  <!-- AI Brilliant Sparkle Stars -->
+  <path d="M360 166 L366 182 L382 188 L366 194 L360 210 L354 194 L338 188 L354 182 Z" fill="#fef08a" filter="url(#yellowGlow)" />
+  <path d="M386 212 L389 221 L398 224 L389 227 L386 236 L383 227 L374 224 L383 221 Z" fill="#facc15" />
+
+  <!-- Prominent Central Rupee Monogram -->
+  <text x="256" y="278" font-family="-apple-system, BlinkMacSystemFont, 'Outfit', 'Inter', sans-serif" font-weight="900" font-size="82" fill="url(#yellowGrad)" text-anchor="middle">₹</text>
+
+  <!-- Accent Status Dots -->
+  <circle cx="148" cy="304" r="7" fill="#facc15" />
+  <circle cx="172" cy="304" r="7" fill="#22c55e" />
+  <circle cx="196" cy="304" r="7" fill="#ef4444" />
+
+  <!-- AI Signal Waves -->
+  <path d="M236 385 Q256 368 276 385" stroke="#fef08a" stroke-width="5.5" stroke-linecap="round" fill="none" opacity="0.9" />
+  <path d="M218 406 Q256 380 294 406" stroke="#facc15" stroke-width="5" stroke-linecap="round" fill="none" opacity="0.75" />
+  <path d="M200 427 Q256 392 312 427" stroke="#ca8a04" stroke-width="4.5" stroke-linecap="round" fill="none" opacity="0.55" />
 </svg>
