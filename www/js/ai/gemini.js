@@ -1,22 +1,11 @@
 // Track-Money: Google Gemini Generative AI Engine & Action Coordinator
 import { AccountModel } from '../models/account.js';
 import { TransactionModel } from '../models/transaction.js';
-
-let localDefaultKey = '';
-let localDefaultModel = 'gemini-3.5-flash';
-try {
-  const localModule = await import('../config.local.js').catch(() => null);
-  if (localModule?.LOCAL_CONFIG) {
-    localDefaultKey = localModule.LOCAL_CONFIG.GEMINI_API_KEY || '';
-    localDefaultModel = localModule.LOCAL_CONFIG.GEMINI_MODEL || 'gemini-3.5-flash';
-  }
-} catch (e) {
-  // config.local.js is git-ignored and optional
-}
+import { APP_CONFIG } from '../config.js';
 
 export class GeminiService {
-  static DEFAULT_KEY = localDefaultKey;
-  static DEFAULT_MODEL = localDefaultModel;
+  static DEFAULT_KEY = APP_CONFIG?.DEFAULT_GEMINI_KEY || '';
+  static DEFAULT_MODEL = APP_CONFIG?.GEMINI_MODEL || 'gemini-3.5-flash';
 
   static getApiKey() {
     return localStorage.getItem('tm_gemini_api_key') || this.DEFAULT_KEY;
