@@ -1,73 +1,70 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <!-- Background Gradient: Deep Obsidian Black with Subtle Gold Warmth -->
-    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#141418" />
-      <stop offset="50%" stop-color="#0a0a0d" />
-      <stop offset="100%" stop-color="#050507" />
-    </linearGradient>
-
-    <!-- Vibrant Yellow Gold Primary Gradient -->
-    <linearGradient id="yellowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#fef08a" />
-      <stop offset="35%" stop-color="#facc15" />
-      <stop offset="70%" stop-color="#eab308" />
+    <!-- Radiant Yellow-Gold Master Gradient -->
+    <linearGradient id="yellowMasterGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fffbeb" />
+      <stop offset="15%" stop-color="#fef08a" />
+      <stop offset="45%" stop-color="#facc15" />
+      <stop offset="75%" stop-color="#eab308" />
       <stop offset="100%" stop-color="#ca8a04" />
     </linearGradient>
 
-    <!-- Card Background Gradient -->
-    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#1c1c22" />
-      <stop offset="50%" stop-color="#121216" />
-      <stop offset="100%" stop-color="#0a0a0d" />
+    <!-- Warm Amber Deep Gold Accent -->
+    <linearGradient id="deepGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#eab308" />
+      <stop offset="100%" stop-color="#a16207" />
     </linearGradient>
 
-    <!-- Golden Glow Drop Shadow Filter -->
-    <filter id="yellowGlow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="10" stdDeviation="18" flood-color="#eab308" flood-opacity="0.45"/>
+    <!-- Obsidian Card Gradient -->
+    <linearGradient id="obsidianCardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#18181c" />
+      <stop offset="50%" stop-color="#101014" />
+      <stop offset="100%" stop-color="#08080a" />
+    </linearGradient>
+
+    <!-- Soft Drop Shadow Filter -->
+    <filter id="cardShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#713f12" flood-opacity="0.35"/>
     </filter>
 
-    <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
-      <feGaussianBlur stdDeviation="22" result="blur"/>
-      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    <filter id="symbolGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#ca8a04" flood-opacity="0.5"/>
     </filter>
   </defs>
 
-  <!-- App Rounded Squircle Container -->
-  <rect width="512" height="512" rx="128" fill="url(#bgGrad)" />
+  <!-- App Yellow-Gold Gradient Squircle -->
+  <rect width="512" height="512" rx="128" fill="url(#yellowMasterGrad)" />
 
-  <!-- Ambient Golden Glow in Center -->
-  <circle cx="256" cy="240" r="160" fill="url(#yellowGrad)" opacity="0.12" filter="url(#softGlow)" />
+  <!-- Subtle Inner Golden Halo Ring -->
+  <circle cx="256" cy="256" r="210" stroke="#ffffff" stroke-width="3" stroke-opacity="0.4" fill="none" />
+  <circle cx="256" cy="256" r="190" stroke="url(#deepGoldGrad)" stroke-width="4" stroke-dasharray="12 8" fill="none" opacity="0.45" />
 
-  <!-- Outer Orbit Ring -->
-  <circle cx="256" cy="256" r="192" stroke="url(#yellowGrad)" stroke-width="4" stroke-dasharray="14 10" fill="none" opacity="0.35" />
+  <!-- Obsidian Jet-Black Premium Financial Card -->
+  <rect x="92" y="132" width="328" height="212" rx="30" fill="url(#obsidianCardGrad)" stroke="#ffffff" stroke-width="2" stroke-opacity="0.25" filter="url(#cardShadow)"/>
 
-  <!-- Obsidian Glass Financial Card with Gold Border -->
-  <rect x="96" y="136" width="320" height="204" rx="28" fill="url(#cardGrad)" stroke="url(#yellowGrad)" stroke-width="4.5" filter="url(#yellowGlow)"/>
-
-  <!-- Card Top Gloss Highlight -->
-  <path d="M98 164 Q98 138 124 138 L388 138 Q414 138 414 164 L414 185 Q256 160 98 190 Z" fill="#ffffff" opacity="0.06" />
+  <!-- Card Top Gloss Light Reflection -->
+  <path d="M94 162 Q94 134 122 134 L390 134 Q418 134 418 162 L418 186 Q256 160 94 192 Z" fill="#ffffff" opacity="0.08" />
 
   <!-- Metallic Gold Microchip -->
-  <rect x="136" y="174" width="52" height="40" rx="8" fill="url(#yellowGrad)" stroke="#ca8a04" stroke-width="1.5" />
-  <line x1="136" y1="194" x2="188" y2="194" stroke="#854d0e" stroke-width="2"/>
-  <line x1="162" y1="174" x2="162" y2="214" stroke="#854d0e" stroke-width="2"/>
-  <circle cx="162" cy="194" r="4" fill="#fef08a" />
+  <rect x="134" y="172" width="54" height="42" rx="10" fill="url(#yellowMasterGrad)" stroke="#a16207" stroke-width="1.5" />
+  <line x1="134" y1="193" x2="188" y2="193" stroke="#854d0e" stroke-width="2"/>
+  <line x1="161" y1="172" x2="161" y2="214" stroke="#854d0e" stroke-width="2"/>
+  <circle cx="161" cy="193" r="4.5" fill="#ffffff" />
 
-  <!-- AI Brilliant Sparkle Stars -->
-  <path d="M360 166 L366 182 L382 188 L366 194 L360 210 L354 194 L338 188 L354 182 Z" fill="#fef08a" filter="url(#yellowGlow)" />
-  <path d="M386 212 L389 221 L398 224 L389 227 L386 236 L383 227 L374 224 L383 221 Z" fill="#facc15" />
+  <!-- AI Brilliant Gold Sparkle Stars -->
+  <path d="M362 162 L369 179 L386 185 L369 191 L362 208 L355 191 L338 185 L355 179 Z" fill="#fef08a" filter="url(#symbolGlow)" />
+  <path d="M388 208 L392 218 L402 221 L392 224 L388 234 L384 224 L374 221 L384 218 Z" fill="#facc15" />
 
-  <!-- Prominent Central Rupee Monogram -->
-  <text x="256" y="278" font-family="-apple-system, BlinkMacSystemFont, 'Outfit', 'Inter', sans-serif" font-weight="900" font-size="82" fill="url(#yellowGrad)" text-anchor="middle">₹</text>
+  <!-- Prominent Central Rupee Symbol in Radiant Gold -->
+  <text x="256" y="278" font-family="-apple-system, BlinkMacSystemFont, 'Outfit', 'Inter', sans-serif" font-weight="900" font-size="86" fill="url(#yellowMasterGrad)" text-anchor="middle" filter="url(#symbolGlow)">₹</text>
 
-  <!-- Accent Status Dots -->
-  <circle cx="148" cy="304" r="7" fill="#facc15" />
-  <circle cx="172" cy="304" r="7" fill="#22c55e" />
-  <circle cx="196" cy="304" r="7" fill="#ef4444" />
+  <!-- Accent Status Dots: Electric Yellow, Profit Green, Alert Red -->
+  <circle cx="146" cy="306" r="7.5" fill="#facc15" />
+  <circle cx="172" cy="306" r="7.5" fill="#22c55e" />
+  <circle cx="198" cy="306" r="7.5" fill="#ef4444" />
 
-  <!-- AI Signal Waves -->
-  <path d="M236 385 Q256 368 276 385" stroke="#fef08a" stroke-width="5.5" stroke-linecap="round" fill="none" opacity="0.9" />
-  <path d="M218 406 Q256 380 294 406" stroke="#facc15" stroke-width="5" stroke-linecap="round" fill="none" opacity="0.75" />
-  <path d="M200 427 Q256 392 312 427" stroke="#ca8a04" stroke-width="4.5" stroke-linecap="round" fill="none" opacity="0.55" />
+  <!-- AI Radar / Audio Signal Waves in Gold -->
+  <path d="M234 388 Q256 370 278 388" stroke="#18181c" stroke-width="6" stroke-linecap="round" fill="none" opacity="0.9" />
+  <path d="M214 410 Q256 382 298 410" stroke="#18181c" stroke-width="5.5" stroke-linecap="round" fill="none" opacity="0.75" />
+  <path d="M194 432 Q256 394 318 432" stroke="#18181c" stroke-width="5" stroke-linecap="round" fill="none" opacity="0.55" />
 </svg>

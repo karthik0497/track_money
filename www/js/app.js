@@ -178,7 +178,7 @@ class TrackMoneyApp {
 
     const metaTheme = document.querySelector('meta[name="theme-color"]');
     if (metaTheme) {
-      metaTheme.setAttribute('content', resolvedTheme === 'light' ? '#f4f6fa' : '#080b12');
+      metaTheme.setAttribute('content', resolvedTheme === 'light' ? '#f8fafc' : '#08080a');
     }
 
     // Update settings badge if settings view is open

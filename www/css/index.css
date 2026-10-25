@@ -517,7 +517,7 @@ html, body {
 }
 
 [data-theme="light"] .brand-title {
-  background: linear-gradient(90deg, #1e1b4b, #4338ca);
+  background: linear-gradient(90deg, #0f172a 45%, #ca8a04 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }

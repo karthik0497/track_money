@@ -7,28 +7,28 @@
   
   <!-- SEO Meta -->
   <meta name="description" content="AI-Powered Personal Finance & Expense Manager with Local Offline Database, Debit & Credit Portfolios, and Voice Conversational Assistant.">
-  <meta name="theme-color" content="#090d16">
+  <meta name="theme-color" content="#08080a">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Track-Money">
 
   <!-- Manifest & Icons -->
-  <link rel="manifest" href="manifest.json">
-  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="manifest" href="manifest.json?v=5">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg?v=5">
+  <link rel="apple-touch-icon" href="icons/icon-192.png?v=5">
 
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="css/index.css">
-  <link rel="stylesheet" href="css/components.css">
-  <link rel="stylesheet" href="css/dashboard.css">
-  <link rel="stylesheet" href="css/assistant.css">
-  <link rel="stylesheet" href="css/accounts.css">
+  <link rel="stylesheet" href="css/index.css?v=5">
+  <link rel="stylesheet" href="css/components.css?v=5">
+  <link rel="stylesheet" href="css/dashboard.css?v=5">
+  <link rel="stylesheet" href="css/assistant.css?v=5">
+  <link rel="stylesheet" href="css/accounts.css?v=5">
   <script>
     (function() {
       const savedTheme = localStorage.getItem('tm_theme') || 'dark';
       document.documentElement.setAttribute('data-theme', savedTheme);
       const metaTheme = document.querySelector('meta[name="theme-color"]');
-      if (metaTheme) metaTheme.setAttribute('content', savedTheme === 'light' ? '#f4f6fa' : '#080b12');
+      if (metaTheme) metaTheme.setAttribute('content', savedTheme === 'light' ? '#f8fafc' : '#08080a');
     })();
   </script>
 </head>
@@ -38,7 +38,7 @@
     <header class="app-header">
       <div class="brand-wrapper">
         <div class="brand-icon-wrapper">
-          <img src="icons/icon.svg" alt="Track-Money Logo">
+          <img src="icons/icon.svg?v=5" alt="Track-Money Logo">
         </div>
         <h1 class="brand-title">Track-Money</h1>
       </div>

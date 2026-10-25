@@ -1,5 +1,5 @@
 // Track-Money Service Worker for 100% Offline Capability & Hybrid App PWA
-const CACHE_NAME = 'track-money-v3';
+const CACHE_NAME = 'track-money-v5';
 
 const ASSETS = [
   './',
@@ -99,7 +99,7 @@ self.addEventListener('fetch', (event) => {
 
           // Ultimate offline HTML response
           return new Response(
-            `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Track-Money</title></head><body style="background:#090d16;color:#f8fafc;font-family:sans-serif;text-align:center;padding:2.5rem 1rem;"><h2>Track-Money App</h2><p>Application is loading. Please reload to sync.</p><button onclick="location.reload()" style="padding:10px 22px;border-radius:8px;background:#6366f1;color:#fff;border:none;cursor:pointer;font-weight:bold;margin-top:1rem;">Reload Track-Money</button></body></html>`,
+            `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Track-Money</title></head><body style="background:#08080a;color:#fcfcfc;font-family:sans-serif;text-align:center;padding:2.5rem 1rem;"><h2>Track-Money App</h2><p>Application is loading. Please reload to sync.</p><button onclick="location.reload()" style="padding:10px 22px;border-radius:8px;background:#eab308;color:#08080a;border:none;cursor:pointer;font-weight:bold;margin-top:1rem;">Reload Track-Money</button></body></html>`,
             {
               status: 200,
               headers: { 'Content-Type': 'text/html; charset=utf-8' }
