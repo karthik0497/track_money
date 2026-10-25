@@ -32,14 +32,9 @@ class TrackMoneyApp {
     // 1. Setup PWA install listeners
     this.setupPwaInstall();
 
-    // 1. Check Profile & PIN Lock
+    // 1. Check Profile
     const profile = await this.storage.getProfile();
     this.updateHeaderProfileBadge(profile.loginId || profile.name || 'User');
-
-    if (profile && profile.pinEnabled && profile.pinCode) {
-      const unlocked = await this.showPinLockScreen(profile.pinCode);
-      if (!unlocked) return;
-    }
 
     // 2. Initialize Views
     this.viewInstances = {

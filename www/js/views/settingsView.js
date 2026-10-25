@@ -1,4 +1,4 @@
-// Track-Money: Settings, Security (PIN Lock), and Audit Trail View
+// Track-Money: Settings, Backup & Restore, and Preferences View
 import { TransactionModel } from '../models/transaction.js';
 import { PermissionsManager } from '../utils/permissions.js';
 import { GeminiService } from '../ai/gemini.js';
@@ -216,32 +216,6 @@ export class SettingsView {
           </div>
         </div>
 
-        <!-- Security & App Lock -->
-        <div class="card" style="margin-bottom: 1.5rem;">
-          <div class="card-header">
-            <h4>App Security & PIN Lock</h4>
-            <span class="badge ${profile.pinEnabled ? 'badge-success' : 'badge-subtle'}">
-              ${profile.pinEnabled ? 'Lock Active' : 'Unlocked'}
-            </span>
-          </div>
-          <p class="text-sm text-muted">Protect your private financial records with a 4-digit PIN lock when launching the app.</p>
-
-          <div style="margin-top: 1rem;">
-            <label class="toggle-switch-label">
-              <input type="checkbox" id="toggle-pin-lock" ${profile.pinEnabled ? 'checked' : ''}>
-              <span class="font-bold">Enable PIN Security Lock</span>
-            </label>
-          </div>
-
-          <div id="pin-setup-box" style="${profile.pinEnabled ? '' : 'display: none;'} margin-top: 1rem;">
-            <div class="form-group" style="max-width: 260px;">
-              <label>Enter 4-digit Security PIN</label>
-              <input type="password" id="input-pin-code" class="form-input" maxlength="4" 
-                     placeholder="••••" value="${profile.pinCode || ''}" autocomplete="off">
-            </div>
-            <button class="btn btn-primary btn-sm" id="btn-save-pin">Update PIN</button>
-          </div>
-        </div>
 
         <!-- Data Backup & Portability -->
         <div class="card" style="margin-bottom: 1.5rem;">
@@ -479,33 +453,6 @@ export class SettingsView {
       this.app.showToast('Permissions updated successfully!');
     });
 
-    const pinToggle = container.querySelector('#toggle-pin-lock');
-    const pinBox = container.querySelector('#pin-setup-box');
-    const pinInput = container.querySelector('#input-pin-code');
-    const savePinBtn = container.querySelector('#btn-save-pin');
-
-    pinToggle?.addEventListener('change', async (e) => {
-      const enabled = e.target.checked;
-      pinBox.style.display = enabled ? 'block' : 'none';
-      if (!enabled) {
-        profile.pinEnabled = false;
-        profile.pinCode = null;
-        await this.storage.put('app_settings', profile);
-        this.app.showToast('PIN Lock disabled.');
-      }
-    });
-
-    savePinBtn?.addEventListener('click', async () => {
-      const code = pinInput.value.trim();
-      if (code.length !== 4 || isNaN(parseInt(code))) {
-        alert('Please enter a valid 4-digit PIN code.');
-        return;
-      }
-      profile.pinEnabled = true;
-      profile.pinCode = code;
-      await this.storage.put('app_settings', profile);
-      this.app.showToast('Security PIN saved!');
-    });
 
     // JSON Export
     container.querySelector('#settings-export-json')?.addEventListener('click', async () => {
