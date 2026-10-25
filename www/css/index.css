@@ -2,46 +2,55 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-  /* Ultra-Premium Color Palette */
-  --bg-app: #080b12;
-  --bg-surface: #0f172a;
-  --bg-surface-elevated: #1e293b;
-  --bg-glass: rgba(15, 23, 42, 0.78);
-  --bg-glass-card: rgba(30, 41, 59, 0.65);
+  /* Yellow & Black Dark Theme with Red Accents (No Blue-Black) */
+  --bg-app: #08080a;             /* Pure Obsidian Jet Black */
+  --bg-surface: #111114;         /* Rich Charcoal Black */
+  --bg-surface-elevated: #1a1a1f;/* Elevated Surface / Modals */
+  --bg-glass: rgba(12, 12, 15, 0.88);
+  --bg-glass-card: rgba(20, 20, 24, 0.78);
   --border-color: rgba(255, 255, 255, 0.08);
-  --border-highlight: rgba(99, 102, 241, 0.35);
+  --border-highlight: rgba(234, 179, 8, 0.45); /* Electric Yellow / Gold */
 
-  /* Financial Accent Colors */
-  --color-primary: #6366f1;
-  --color-primary-glow: rgba(99, 102, 241, 0.35);
-  --color-primary-hover: #4f46e5;
-  --color-success: #10b981;
-  --color-success-bg: rgba(16, 185, 129, 0.12);
-  --color-danger: #f43f5e;
-  --color-danger-bg: rgba(244, 63, 94, 0.12);
+  /* Yellow & Gold Primary */
+  --color-primary: #eab308;
+  --color-primary-glow: rgba(234, 179, 8, 0.35);
+  --color-primary-hover: #ca8a04;
+  --color-primary-text: #08080a;
+
+  /* Red Accents (Liabilities, Debt, Overdue, Expenses) */
+  --color-danger: #ef4444;
+  --color-danger-bg: rgba(239, 68, 68, 0.14);
+  --color-danger-glow: rgba(239, 68, 68, 0.35);
+
+  /* Financial Accents */
   --color-warning: #f59e0b;
-  --color-warning-bg: rgba(245, 158, 11, 0.12);
-  --color-info: #06b6d4;
-  --color-ai: #8b5cf6;
+  --color-warning-bg: rgba(245, 158, 11, 0.14);
+  --color-success: #22c55e;
+  --color-success-bg: rgba(34, 197, 94, 0.14);
+  --color-info: #eab308;
+  --color-ai: #facc15;
+  --color-ai-glow: rgba(250, 204, 21, 0.45);
 
   /* Typography */
   --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 
   /* Text Colors */
-  --text-main: #f8fafc;
-  --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
-  --text-dim: #64748b;
+  --text-main: #fcfcfc;
+  --text-secondary: #d4d4d8;
+  --text-muted: #a1a1aa;
+  --text-dim: #71717a;
+  --text-yellow: #facc15;
+  --text-red: #ef4444;
 
   /* Shadows & Radius */
   --radius-sm: 8px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
   --radius-full: 9999px;
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
-  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.45);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.65);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.85);
   --shadow-glow: 0 0 25px var(--color-primary-glow);
 }
 
@@ -272,6 +281,25 @@ html, body {
   transform: scale(0.94);
 }
 
+.nav-item.btn-ai-sparkle-nav {
+  position: relative;
+}
+
+.nav-item.btn-ai-sparkle-nav .nav-icon {
+  filter: drop-shadow(0 0 8px rgba(250, 204, 21, 0.6));
+  animation: sparkleBounce 3s ease-in-out infinite;
+}
+
+.nav-item.btn-ai-sparkle-nav .nav-label {
+  color: #facc15;
+  font-weight: 700;
+}
+
+@keyframes sparkleBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px) scale(1.1); }
+}
+
 /* Animations */
 .fade-in {
   animation: fadeIn 0.25s ease-out forwards;
@@ -364,18 +392,20 @@ html, body {
     overflow-x: hidden;
   }
   .bottom-nav {
-    height: calc(60px + env(safe-area-inset-bottom, 0px));
-    padding: 0 0.15rem max(6px, env(safe-area-inset-bottom, 0px)) 0.15rem;
+    height: calc(62px + env(safe-area-inset-bottom, 0px));
+    padding: 0 0.5rem max(6px, env(safe-area-inset-bottom, 0px)) 0.5rem;
   }
   .nav-item {
-    padding: 4px 1px;
-    min-height: 48px;
+    padding: 6px 4px;
+    min-height: 50px;
+    border-radius: var(--radius-sm);
   }
   .nav-item .nav-icon {
-    font-size: 1.2rem;
+    font-size: 1.35rem;
+    margin-bottom: 2px;
   }
   .nav-item .nav-label {
-    font-size: 0.62rem;
+    font-size: 0.72rem;
     font-weight: 600;
   }
   .grid-2-col {

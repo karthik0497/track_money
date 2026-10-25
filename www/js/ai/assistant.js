@@ -1,6 +1,7 @@
 // Track-Money: AI Conversational Coordinator & Safety Flow Manager
 import { NLUEngine } from './nlu.js';
 import { FinancialQueryEngine } from './queries.js';
+import { GeminiService } from './gemini.js';
 import { AccountModel } from '../models/account.js';
 import { TransactionModel } from '../models/transaction.js';
 
@@ -32,6 +33,30 @@ export class AssistantCoordinator {
       if (handled) return handled;
     }
 
+    // --- 1. GOOGLE GEMINI GENERATIVE AI (Primary Intelligence) ---
+    if (GeminiService.isConfigured()) {
+      try {
+        const financialContext = await this.storage.getFinancialContextForAI();
+        const geminiResult = await GeminiService.generateResponse(text, financialContext, this.conversationHistory);
+
+        if (geminiResult && geminiResult.action) {
+          return await this.handleGeminiAction(geminiResult, text);
+        } else if (geminiResult && geminiResult.text) {
+          const aiMsg = {
+            sender: 'ai',
+            text: geminiResult.text,
+            type: 'gemini_response',
+            timestamp: Date.now()
+          };
+          this.conversationHistory.push(aiMsg);
+          return aiMsg;
+        }
+      } catch (geminiError) {
+        console.warn('Gemini API call failed, gracefully falling back to local NLU engine:', geminiError);
+      }
+    }
+
+    // --- 2. LOCAL OFFLINE NLU & QUERY FALLBACK ---
     // Parse input using NLU engine
     const nluResult = NLUEngine.parse(text, accounts, categories);
 
@@ -128,6 +153,16 @@ export class AssistantCoordinator {
 
   async handlePendingClarification(text, accounts) {
     const clean = text.toLowerCase();
+
+    // Check if user confirmed or rejected a Gemini action
+    if (this.pendingAction && this.pendingAction.type === 'gemini_pending_action') {
+      if (['yes', 'confirm', 'yup', 'correct', 'ok', 'okay', 'save', 'add', 'sure', 'create', 'create it', 'yes please', 'do it', 'proceed', 'apply'].some(w => clean.includes(w))) {
+        return await this.confirmGeminiAction();
+      }
+      if (['no', 'cancel', 'stop', 'nevermind', 'dont', 'dismiss'].some(w => clean.includes(w))) {
+        return await this.cancelGeminiAction();
+      }
+    }
 
     // Check if user confirmed or rejected
     if (this.pendingAction && this.pendingAction.type === 'awaiting_confirmation') {
@@ -580,5 +615,70 @@ export class AssistantCoordinator {
       this.storage.updateAiAuditStatus(this.pendingAction.auditId, 'cancelled');
     }
     this.pendingAction = null;
+  }
+
+  // --- GEMINI SPECIFIC ACTION HANDLERS ---
+  async handleGeminiAction(geminiResult, rawUtterance) {
+    const { cleanText, action } = geminiResult;
+    this.pendingAction = {
+      type: 'gemini_pending_action',
+      action,
+      rawUtterance
+    };
+
+    const confirmMsg = {
+      sender: 'ai',
+      text: cleanText || 'I have prepared this financial action for you. Please confirm to apply:',
+      type: 'gemini_action_card',
+      data: {
+        action,
+        actionType: action.action,
+        parameters: action.parameters
+      },
+      timestamp: Date.now()
+    };
+    this.conversationHistory.push(confirmMsg);
+    return confirmMsg;
+  }
+
+  async confirmGeminiAction() {
+    if (!this.pendingAction || this.pendingAction.type !== 'gemini_pending_action') return null;
+    const { action } = this.pendingAction;
+    this.pendingAction = null;
+
+    try {
+      const result = await GeminiService.executeAction(action, this.storage);
+      if (this.onUpdate) this.onUpdate();
+
+      const successMsg = {
+        sender: 'ai',
+        text: `✅ **Action Applied Successfully!**\n\n${result.message}`,
+        type: 'gemini_action_success',
+        timestamp: Date.now()
+      };
+      this.conversationHistory.push(successMsg);
+      return successMsg;
+    } catch (err) {
+      const errorMsg = {
+        sender: 'ai',
+        text: `❌ Could not execute action: ${err.message}`,
+        type: 'action_error',
+        timestamp: Date.now()
+      };
+      this.conversationHistory.push(errorMsg);
+      return errorMsg;
+    }
+  }
+
+  async cancelGeminiAction() {
+    this.pendingAction = null;
+    const cancelMsg = {
+      sender: 'ai',
+      text: '❌ Action cancelled. No changes were made to your accounts or categories.',
+      type: 'text',
+      timestamp: Date.now()
+    };
+    this.conversationHistory.push(cancelMsg);
+    return cancelMsg;
   }
 }

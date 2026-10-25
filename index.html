@@ -46,11 +46,11 @@
         <button class="btn-install-header" id="header-install-btn" title="Install as Hybrid App" style="display: none;">
           📲 <span class="hide-on-mobile">Install App</span>
         </button>
-        <button class="btn btn-icon" id="header-camera-btn" title="Scan Receipt with Camera">
-          📷
-        </button>
         <button class="btn btn-icon" id="header-voice-btn" title="Voice AI Assistant">
           ✨
+        </button>
+        <button class="btn btn-icon" id="header-settings-btn" title="Settings & Tools">
+          ⚙️
         </button>
       </div>
     </header>
@@ -60,7 +60,7 @@
       <!-- Dynamically injected views -->
     </main>
 
-    <!-- Bottom Navigation Bar: Clean, Spacious & Non-Congested -->
+    <!-- Bottom Navigation Bar: Consolidated 3-Tab High-Efficiency Layout -->
     <nav class="bottom-nav" role="navigation" aria-label="Main Navigation">
       <button class="nav-item active" data-view="dashboard" id="nav-dashboard">
         <span class="nav-icon">📊</span>
@@ -70,17 +70,9 @@
         <span class="nav-icon">🏦</span>
         <span class="nav-label">Accounts</span>
       </button>
-      <button class="nav-item" data-view="transactions" id="nav-transactions">
-        <span class="nav-icon">📜</span>
-        <span class="nav-label">History</span>
-      </button>
-      <button class="nav-item" data-view="reports" id="nav-reports">
-        <span class="nav-icon">📈</span>
-        <span class="nav-label">Reports</span>
-      </button>
-      <button class="nav-item" data-view="more" id="nav-more-toggle" aria-haspopup="true">
-        <span class="nav-icon">☰</span>
-        <span class="nav-label">More</span>
+      <button class="nav-item btn-ai-sparkle-nav" data-view="assistant" id="nav-assistant">
+        <span class="nav-icon">✨</span>
+        <span class="nav-label">AI Co-Pilot</span>
       </button>
     </nav>
 
@@ -119,15 +111,6 @@
             <div class="more-text-col">
               <span class="more-title">Settings & PIN</span>
               <span class="more-desc">Permissions, lock, backups</span>
-            </div>
-            <span class="more-arrow">➔</span>
-          </button>
-
-          <button class="more-menu-item" id="nav-camera-scan">
-            <div class="more-icon-box" style="background: rgba(236, 72, 153, 0.15); color: #f472b6;">📷</div>
-            <div class="more-text-col">
-              <span class="more-title">Scan Receipt</span>
-              <span class="more-desc">Camera & paper bill scanner</span>
             </div>
             <span class="more-arrow">➔</span>
           </button>

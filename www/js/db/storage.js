@@ -1,5 +1,6 @@
 // Track-Money: IndexedDB Local Relational Storage Engine
 import { DB_NAME, DB_VERSION, STORES, DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES, DEFAULT_TRANSACTIONS, DEFAULT_RECURRING } from './schema.js';
+import { AccountModel } from '../models/account.js';
 
 export class StorageEngine {
   constructor() {
@@ -494,8 +495,8 @@ export class StorageEngine {
               totalRefunds += amt;
             }
           }
-          // If this credit card received a payment
-          if (tx.targetAccountId === acc.id && tx.type === 'credit_card_payment') {
+          // If this credit card received a payment or transfer from bank
+          if (tx.targetAccountId === acc.id && (tx.type === 'credit_card_payment' || tx.type === 'transfer')) {
             totalPaymentsMade += amt;
           }
         }
@@ -573,17 +574,25 @@ export class StorageEngine {
     const savingsThisMonth = thisMonthIncome - thisMonthExpense;
     const savingsRate = thisMonthIncome > 0 ? Math.max(0, ((savingsThisMonth / thisMonthIncome) * 100)).toFixed(1) : 0;
 
-    // Upcoming credit card payments
+    // Upcoming credit card payments with dynamic recurring monthly due calculation
     const upcomingPayments = creditAccounts
-      .filter(a => (a.currentOutstanding || 0) > 0 && a.dueDate)
-      .map(a => ({
-        id: a.id,
-        accountName: a.name,
-        amountDue: a.currentOutstanding,
-        dueDate: a.dueDate,
-        billingCycle: a.billingCycle
-      }))
-      .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+      .filter(a => (a.currentOutstanding || 0) > 0)
+      .map(a => {
+        const dueInfo = AccountModel.getNextDueDate(a);
+        return {
+          id: a.id,
+          accountName: a.name,
+          amountDue: a.currentOutstanding,
+          dueDate: dueInfo.dateString,
+          dueDay: dueInfo.dueDay,
+          daysUntilDue: dueInfo.daysUntilDue,
+          isOverdue: dueInfo.isOverdue,
+          isDueToday: dueInfo.isDueToday,
+          isDueSoon: dueInfo.isDueSoon,
+          billingCycle: a.billingCycle || `${dueInfo.dueDay}th of month`
+        };
+      })
+      .sort((a, b) => a.daysUntilDue - b.daysUntilDue);
 
     // Sort transactions by date descending
     const recentTransactions = [...transactions]
@@ -606,6 +615,61 @@ export class StorageEngine {
       debitAccounts,
       creditAccounts,
       recentTransactions
+    };
+  }
+
+  // Comprehensive aggregated financial context for Gemini AI
+  async getFinancialContextForAI() {
+    const metrics = await this.getDashboardMetrics();
+    const accounts = await this.getAccountsWithCalculatedBalances();
+    const categories = await this.getAll(STORES.CATEGORIES);
+    const recentTx = await this.getFilteredTransactions({});
+
+    return {
+      netPosition: metrics.netPosition,
+      totalAssets: metrics.totalAssets,
+      totalLiabilities: metrics.totalLiabilities,
+      thisMonthIncome: metrics.thisMonthIncome,
+      thisMonthExpense: metrics.thisMonthExpense,
+      savingsThisMonth: metrics.savingsThisMonth,
+      savingsRate: metrics.savingsRate,
+      overallCreditUtilization: metrics.overallCreditUtilization,
+      categorySpending: metrics.categorySpending,
+      upcomingDues: metrics.upcomingPayments,
+      accounts: accounts.map(a => {
+        const dueInfo = a.category === 'credit' ? AccountModel.getNextDueDate(a) : null;
+        return {
+          id: a.id,
+          name: a.name,
+          category: a.category,
+          type: a.type,
+          balance: a.category === 'debit' ? a.currentBalance : undefined,
+          outstanding: a.category === 'credit' ? a.currentOutstanding : undefined,
+          limit: a.category === 'credit' ? a.creditLimit : undefined,
+          utilizationRate: a.category === 'credit' ? a.utilizationRate : undefined,
+          dueDay: dueInfo ? dueInfo.dueDay : undefined,
+          nextDueDate: dueInfo ? dueInfo.dateString : undefined,
+          daysUntilDue: dueInfo ? dueInfo.daysUntilDue : undefined,
+          isDueSoon: dueInfo ? dueInfo.isDueSoon : undefined
+        };
+      }),
+      categories: categories.map(c => ({
+        name: c.name,
+        type: c.type,
+        icon: c.icon,
+        subcategories: c.subcategories || []
+      })),
+      recentTransactions: recentTx.slice(0, 35).map(t => ({
+        id: t.id,
+        date: t.date,
+        type: t.type,
+        amount: t.amount,
+        category: t.category,
+        subcategory: t.subcategory,
+        accountName: t.accountName,
+        targetAccountName: t.targetAccountName,
+        description: t.description
+      }))
     };
   }
 

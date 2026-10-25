@@ -1,6 +1,7 @@
 // Track-Money: Settings, Security (PIN Lock), and Audit Trail View
 import { TransactionModel } from '../models/transaction.js';
 import { PermissionsManager } from '../utils/permissions.js';
+import { GeminiService } from '../ai/gemini.js';
 
 export class SettingsView {
   constructor(storage, app) {
@@ -62,7 +63,45 @@ export class SettingsView {
           </form>
         </div>
 
-        <!-- 2. Appearance & Theme (Dark Mode / Light Mode) -->
+        <!-- 2. Google Gemini Generative AI Configuration -->
+        <div class="card" style="margin-bottom: 1.5rem; border: 1px solid rgba(234, 179, 8, 0.4); background: linear-gradient(180deg, rgba(234, 179, 8, 0.05) 0%, var(--bg-surface) 100%);">
+          <div class="card-header">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="text-lg">✨</span>
+              <h4>Google Gemini Generative AI</h4>
+            </div>
+            <span class="badge badge-success" id="badge-gemini-status">Active & Connected</span>
+          </div>
+          <p class="text-sm text-muted">Your personal AI finance co-pilot uses Google Gemini 3.5 Flash with full visibility into your live balances, cash flow, and categories to answer queries, track expenses, and execute money actions.</p>
+
+          <form id="settings-gemini-form" style="margin-top: 1rem;">
+            <div class="grid-2-col">
+              <div class="form-group">
+                <label>Gemini API Key</label>
+                <div style="position: relative; display: flex; align-items: center;">
+                  <input type="password" id="settings-gemini-key" class="form-input" 
+                         value="${GeminiService.getApiKey()}" required placeholder="Enter Gemini API key..." style="padding-right: 40px;">
+                  <button type="button" id="btn-toggle-key-visibility" class="btn btn-icon btn-sm" 
+                          style="position: absolute; right: 4px; background: transparent; border: none;" title="Show/Hide Key">👁️</button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>AI Model</label>
+                <select id="settings-gemini-model" class="form-input font-bold">
+                  <option value="gemini-3.5-flash" ${GeminiService.getModel() === 'gemini-3.5-flash' ? 'selected' : ''}>gemini-3.5-flash (Default • High Speed & Low Latency)</option>
+                  <option value="gemini-1.5-pro" ${GeminiService.getModel() === 'gemini-1.5-pro' ? 'selected' : ''}>gemini-1.5-pro (Extended Reasoning)</option>
+                </select>
+              </div>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 0.75rem; flex-wrap: wrap; align-items: center;">
+              <button type="submit" class="btn btn-primary btn-sm">💾 Save Gemini Config</button>
+              <button type="button" class="btn btn-outline btn-sm" id="btn-test-gemini-connection">⚡ Test Live Connection</button>
+              <span class="text-xs" id="gemini-test-result" style="color: var(--color-primary); font-weight: 600;"></span>
+            </div>
+          </form>
+        </div>
+
+        <!-- 3. Appearance & Theme (Dark Mode / Light Mode) -->
         <div class="card" style="margin-bottom: 1.5rem;">
           <div class="card-header">
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -166,19 +205,7 @@ export class SettingsView {
               </div>
             </div>
 
-            <div class="perm-row">
-              <div class="perm-info">
-                <span class="perm-icon">📷</span>
-                <div>
-                  <div class="font-bold text-sm">Camera & Scanner</div>
-                  <div class="text-xs text-muted">Scan paper receipts, UPI QR, and bills</div>
-                </div>
-              </div>
-              <div class="perm-actions">
-                <span class="badge badge-subtle" id="badge-cam-perm">Checking...</span>
-                <button class="btn btn-outline btn-xs" id="btn-request-cam">Request</button>
-              </div>
-            </div>
+
 
             <div class="perm-row">
               <div class="perm-info">
@@ -333,6 +360,47 @@ export class SettingsView {
       this.app.openProfileModal();
     });
 
+    // Gemini AI Configuration Handlers
+    const geminiForm = container.querySelector('#settings-gemini-form');
+    const geminiKeyInput = container.querySelector('#settings-gemini-key');
+    const geminiModelSelect = container.querySelector('#settings-gemini-model');
+    const toggleKeyBtn = container.querySelector('#btn-toggle-key-visibility');
+    const testGeminiBtn = container.querySelector('#btn-test-gemini-connection');
+    const testResultSpan = container.querySelector('#gemini-test-result');
+
+    toggleKeyBtn?.addEventListener('click', () => {
+      if (geminiKeyInput.type === 'password') {
+        geminiKeyInput.type = 'text';
+        toggleKeyBtn.textContent = '🔒';
+      } else {
+        geminiKeyInput.type = 'password';
+        toggleKeyBtn.textContent = '👁️';
+      }
+    });
+
+    geminiForm?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const key = geminiKeyInput.value.trim();
+      const model = geminiModelSelect.value.trim();
+      GeminiService.saveConfig(key, model);
+      this.app.showToast(`✨ Gemini Configuration Saved (${model})`);
+      if (testResultSpan) testResultSpan.textContent = 'Config saved!';
+    });
+
+    testGeminiBtn?.addEventListener('click', async () => {
+      testGeminiBtn.disabled = true;
+      testResultSpan.textContent = 'Connecting to Google Gemini...';
+      const res = await GeminiService.testConnection();
+      testGeminiBtn.disabled = false;
+      if (res.success) {
+        testResultSpan.innerHTML = `✅ Connected in ${res.latency}ms (${res.model})`;
+        this.app.showToast(`Gemini is online & verified! (${res.latency}ms)`);
+      } else {
+        testResultSpan.innerHTML = `❌ Error: ${res.status || 'Failed'} (${res.latency}ms)`;
+        this.app.showToast(`Gemini error: ${res.error || 'Connection failed'}`);
+      }
+    });
+
     // Quick Theme Toggle Button in Settings
     container.querySelector('#btn-quick-theme-toggle')?.addEventListener('click', () => {
       const current = document.documentElement.getAttribute('data-theme') || 'dark';
@@ -402,10 +470,7 @@ export class SettingsView {
         micBadge.textContent = perms.microphone === 'granted' ? 'Granted ✅' : (perms.microphone === 'denied' ? 'Denied ❌' : 'Prompt ⚠️');
         micBadge.className = `badge ${perms.microphone === 'granted' ? 'badge-success' : (perms.microphone === 'denied' ? 'badge-danger' : 'badge-warning')}`;
       }
-      if (camBadge) {
-        camBadge.textContent = perms.camera === 'granted' ? 'Granted ✅' : (perms.camera === 'denied' ? 'Denied ❌' : 'Prompt ⚠️');
-        camBadge.className = `badge ${perms.camera === 'granted' ? 'badge-success' : (perms.camera === 'denied' ? 'badge-danger' : 'badge-warning')}`;
-      }
+
       if (notifBadge) {
         notifBadge.textContent = perms.notifications === 'granted' ? 'Granted ✅' : (perms.notifications === 'denied' ? 'Denied ❌' : 'Default ⚠️');
         notifBadge.className = `badge ${perms.notifications === 'granted' ? 'badge-success' : (perms.notifications === 'denied' ? 'badge-danger' : 'badge-subtle')}`;
@@ -419,11 +484,7 @@ export class SettingsView {
       this.app.showToast(res.message);
     });
 
-    container.querySelector('#btn-request-cam')?.addEventListener('click', async () => {
-      const res = await PermissionsManager.requestCamera();
-      await updatePermissionBadges();
-      this.app.showToast(res.message);
-    });
+
 
     container.querySelector('#btn-request-notif')?.addEventListener('click', async () => {
       const res = await PermissionsManager.requestNotifications();

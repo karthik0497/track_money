@@ -1,152 +1,104 @@
 /* Track-Money: Dashboard Styles */
 
-/* Hero Net Position Banner */
-.hero-net-card {
-  border-radius: var(--radius-lg);
-  padding: 1.5rem;
-  margin-bottom: 1.25rem;
-  position: relative;
-  overflow: hidden;
-  box-shadow: var(--shadow-md);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-}
-
-.hero-positive {
-  background: linear-gradient(135deg, rgba(30, 27, 75, 0.85) 0%, rgba(15, 23, 42, 0.95) 50%, rgba(6, 78, 59, 0.4) 100%);
-}
-
-.hero-negative {
-  background: linear-gradient(135deg, rgba(30, 27, 75, 0.85) 0%, rgba(15, 23, 42, 0.95) 50%, rgba(153, 27, 27, 0.4) 100%);
-}
-
-.hero-header {
+/* Compact Executive Wealth Card */
+.compact-executive-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 0.5rem;
-}
-
-.hero-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: #a5b4fc;
-}
-
-.hero-badge {
-  font-size: 0.7rem;
-  background: rgba(255, 255, 255, 0.08);
-  padding: 2px 8px;
-  border-radius: var(--radius-full);
-  color: var(--text-muted);
-}
-
-.hero-amount {
-  font-family: var(--font-heading);
-  font-size: 2.35rem;
-  font-weight: 800;
-  letter-spacing: -1px;
-  color: #ffffff;
-  margin: 0.25rem 0;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
-}
-
-.hero-subtext {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  margin-bottom: 1.25rem;
-}
-
-.hero-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  padding-top: 1rem;
-}
-
-.hero-stat-item {
-  background: rgba(15, 23, 42, 0.45);
-  padding: 10px 14px;
+  background: var(--bg-glass-card);
+  border: 1px solid rgba(234, 179, 8, 0.3);
   border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  transition: background 0.2s ease, transform 0.2s ease;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
 }
 
-.hero-stat-item:hover {
-  background: rgba(15, 23, 42, 0.7);
-  transform: translateY(-2px);
-}
-
-.stat-title {
+.exec-col {
+  flex: 1;
   display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.72rem;
-  color: var(--text-secondary);
-  margin-bottom: 2px;
+  flex-direction: column;
 }
 
-.stat-value {
-  font-family: var(--font-heading);
-  font-size: 1.2rem;
+.exec-col.exec-net {
+  flex: 1.2;
+}
+
+.exec-label {
+  font-size: 0.62rem;
   font-weight: 700;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  text-transform: uppercase;
 }
 
-.stat-caption {
-  font-size: 0.65rem;
+.exec-val {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1.2;
+  margin: 2px 0;
+}
+
+.exec-caption {
+  font-size: 0.62rem;
   color: var(--text-dim);
+}
+
+.exec-divider {
+  width: 1px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 0 10px;
 }
 
 .quick-actions-bar {
   display: flex;
   gap: 8px;
-  margin-bottom: 1.25rem;
-  flex-wrap: wrap;
+  margin-bottom: 0.85rem;
 }
 
 .quick-actions-bar .btn {
-  flex: 1 1 110px;
-  min-height: 42px;
-  padding: 0.65rem 0.5rem;
-  font-size: 0.82rem;
+  flex: 1;
+  min-height: 36px;
+  padding: 0.45rem 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 700;
   text-align: center;
 }
 
-/* Cashflow Stats Row */
+/* Cashflow Stats Row - High-Density Small Cards */
 .stats-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-bottom: 1.25rem;
+  gap: 8px;
+  margin-bottom: 0.85rem;
 }
 
 .stat-card {
-  padding: 1rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
 }
 
 .card-header-mini {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.75rem;
+  font-size: 0.68rem;
   font-weight: 600;
   color: var(--text-muted);
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
 }
 
 .stat-number {
   font-family: var(--font-heading);
-  font-size: 1.35rem;
+  font-size: 1.05rem;
   font-weight: 700;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .stat-trend {
-  font-size: 0.72rem;
+  font-size: 0.65rem;
 }
 
 /* Donut Chart Layout */
@@ -205,7 +157,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 10px;
-  background: rgba(15, 23, 42, 0.4);
+  background: rgba(24, 24, 28, 0.6);
   border-radius: var(--radius-sm);
   border: 1px solid rgba(255, 255, 255, 0.04);
 }
@@ -248,9 +200,15 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 10px;
-  background: rgba(245, 158, 11, 0.06);
-  border: 1px solid rgba(245, 158, 11, 0.2);
+  background: rgba(234, 179, 8, 0.06);
+  border: 1px solid rgba(234, 179, 8, 0.2);
   border-radius: var(--radius-sm);
+}
+
+.bill-item.bill-due-urgent {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.4);
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.12);
 }
 
 .bill-action {
@@ -273,13 +231,14 @@
   gap: 12px;
   padding: 10px 12px;
   border-radius: var(--radius-sm);
-  background: rgba(15, 23, 42, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  transition: background 0.15s ease;
+  background: rgba(24, 24, 28, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: all 0.15s ease;
 }
 
 .tx-item:hover {
-  background: rgba(15, 23, 42, 0.75);
+  background: rgba(30, 30, 36, 0.85);
+  border-color: rgba(234, 179, 8, 0.2);
 }
 
 .tx-icon-col {

@@ -31,57 +31,43 @@ export class DashboardView {
           </div>
         ` : ''}
 
-        <!-- Top Executive Hero Banner: Net Position -->
-        <div class="hero-net-card ${isNegativeNet ? 'hero-negative' : 'hero-positive'}">
-          <div class="hero-header">
-            <div class="hero-label">
-              <span class="hero-icon">💎</span>
-              <span>TOTAL NET POSITION</span>
+        <!-- Compact Executive Wealth Strip: Small, High-Density, Elegant -->
+        <div class="compact-executive-card">
+          <div class="exec-col exec-net">
+            <span class="exec-label">NET POSITION</span>
+            <div class="exec-val ${isNegativeNet ? 'text-red' : 'text-yellow'}">
+              ${AccountModel.formatCurrency(metrics.netPosition)}
             </div>
-            <div class="hero-badge">Assets − Liabilities</div>
+            <span class="exec-caption">${metrics.debitAccounts.length + metrics.creditAccounts.length} accounts total</span>
           </div>
-          <div class="hero-amount">
-            ${AccountModel.formatCurrency(metrics.netPosition)}
-          </div>
-          <div class="hero-subtext">
-            Transaction-verified across ${metrics.debitAccounts.length + metrics.creditAccounts.length} accounts
-          </div>
-
-          <div class="hero-grid">
-            <div class="hero-stat-item" id="nav-to-assets" style="cursor: pointer;">
-              <div class="stat-title">
-                <span class="dot dot-success"></span>
-                <span>Total Assets</span>
-              </div>
-              <div class="stat-value text-success">
-                ${AccountModel.formatCurrency(metrics.totalAssets)}
-              </div>
-              <div class="stat-caption">Bank, Savings, Demat, Cash</div>
+          <div class="exec-divider"></div>
+          <div class="exec-col exec-assets" id="nav-to-assets" title="View Debit & Bank Accounts" style="cursor: pointer;">
+            <span class="exec-label">TOTAL ASSETS</span>
+            <div class="exec-val text-yellow">
+              ${AccountModel.formatCurrency(metrics.totalAssets)}
             </div>
-
-            <div class="hero-stat-item" id="nav-to-liabilities" style="cursor: pointer;">
-              <div class="stat-title">
-                <span class="dot dot-danger"></span>
-                <span>Total Liabilities</span>
-              </div>
-              <div class="stat-value text-danger">
-                ${AccountModel.formatCurrency(metrics.totalLiabilities)}
-              </div>
-              <div class="stat-caption">Credit Cards & Pay Later</div>
+            <span class="exec-caption">Bank, Savings, Cash</span>
+          </div>
+          <div class="exec-divider"></div>
+          <div class="exec-col exec-liabilities" id="nav-to-liabilities" title="View Credit & Liabilities" style="cursor: pointer;">
+            <span class="exec-label">TOTAL DEBT</span>
+            <div class="exec-val text-red">
+              ${AccountModel.formatCurrency(metrics.totalLiabilities)}
             </div>
+            <span class="exec-caption">Credit Cards & Loans</span>
           </div>
         </div>
 
-        <!-- Quick Action Bar -->
+        <!-- Compact Quick Action Bar -->
         <div class="quick-actions-bar">
-          <button class="btn btn-primary" id="dash-btn-add-tx">
-            <span>➕ Add Transaction</span>
+          <button class="btn btn-primary btn-sm" id="dash-btn-add-tx">
+            <span>➕ Add Tx</span>
           </button>
-          <button class="btn btn-secondary" id="dash-btn-transfer">
-            <span>⇄ Transfer Money</span>
+          <button class="btn btn-secondary btn-sm" id="dash-btn-transfer">
+            <span>⇄ Transfer & Pay</span>
           </button>
-          <button class="btn btn-ai-sparkle" id="dash-btn-voice-ai">
-            <span>✨ AI Voice / Text</span>
+          <button class="btn btn-ai-sparkle btn-sm" id="dash-btn-voice-ai">
+            <span>✨ AI Co-Pilot</span>
           </button>
         </div>
 
@@ -161,30 +147,62 @@ export class DashboardView {
             </div>
           </div>
 
-          <!-- Upcoming Bill Payments -->
+          <!-- Upcoming Bill Payments & Dues Reminders -->
           <div class="card upcoming-bills-card">
             <div class="card-header">
-              <h4>Upcoming Credit Dues</h4>
-              <span class="badge badge-subtle">${metrics.upcomingPayments.length} Active</span>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="text-lg">💳</span>
+                <h4>Upcoming Credit Dues</h4>
+              </div>
+              <span class="badge ${metrics.upcomingPayments.some(p => p.isDueSoon || p.isOverdue) ? 'badge-danger' : 'badge-subtle'}">
+                ${metrics.upcomingPayments.length} Active
+              </span>
             </div>
             ${metrics.upcomingPayments.length === 0 ? `
-              <div class="empty-placeholder">No upcoming credit dues recorded! 🎉</div>
+              <div class="empty-placeholder" style="padding: 1rem; text-align: center;">
+                <div style="font-size: 1.5rem; margin-bottom: 0.25rem;">🎉</div>
+                <div class="font-bold text-xs text-success">No upcoming credit card dues!</div>
+                <div class="text-xs text-muted" style="margin-top: 2px;">All bills are cleared or within grace period.</div>
+              </div>
             ` : `
               <div class="bills-list">
-                ${metrics.upcomingPayments.map(bill => `
-                  <div class="bill-item">
-                    <div class="bill-info">
-                      <div class="bill-name font-bold">${bill.accountName}</div>
-                      <div class="bill-due text-xs text-warning">Due: ${TransactionModel.formatDate(bill.dueDate)}</div>
+                ${metrics.upcomingPayments.map(bill => {
+                  let badgeText = '';
+                  let badgeClass = 'badge-subtle';
+                  if (bill.isOverdue) {
+                    badgeText = `🚨 Overdue by ${Math.abs(bill.daysUntilDue)}d`;
+                    badgeClass = 'badge-danger font-bold';
+                  } else if (bill.isDueToday) {
+                    badgeText = '⚠️ Due Today!';
+                    badgeClass = 'badge-warning font-bold';
+                  } else if (bill.daysUntilDue <= 10) {
+                    badgeText = `⏳ Due in ${bill.daysUntilDue} days`;
+                    badgeClass = 'badge-warning font-bold';
+                  } else {
+                    badgeText = `Due in ${bill.daysUntilDue} days`;
+                    badgeClass = 'badge-subtle';
+                  }
+
+                  return `
+                    <div class="bill-item ${bill.isDueSoon || bill.isOverdue ? 'bill-due-urgent' : ''}" style="padding: 8px 10px; border-radius: var(--radius-sm); border: 1px solid ${bill.isOverdue ? 'rgba(239, 68, 68, 0.4)' : (bill.isDueSoon ? 'rgba(234, 179, 8, 0.35)' : 'var(--border-color)')}; margin-bottom: 6px; background: ${bill.isOverdue ? 'rgba(239, 68, 68, 0.06)' : (bill.isDueSoon ? 'rgba(234, 179, 8, 0.05)' : 'transparent')};">
+                      <div class="bill-info">
+                        <div class="bill-name font-bold" style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                          <span>${bill.accountName}</span>
+                          <span class="badge ${badgeClass}" style="font-size: 0.65rem; padding: 1px 6px;">${badgeText}</span>
+                        </div>
+                        <div class="bill-due text-xs text-muted" style="margin-top: 2px;">
+                          Due: <strong style="color: var(--text-main);">${TransactionModel.formatDate(bill.dueDate)}</strong> (every ${bill.dueDay}th of month)
+                        </div>
+                      </div>
+                      <div class="bill-action" style="display: flex; align-items: center; gap: 8px;">
+                        <div class="bill-amount text-danger font-bold text-sm">${AccountModel.formatCurrency(bill.amountDue)}</div>
+                        <button class="btn btn-xs btn-primary pay-bill-btn" data-account-id="${bill.id}" data-amount="${bill.amountDue}" title="Pay Bill from Bank">
+                          Pay Now
+                        </button>
+                      </div>
                     </div>
-                    <div class="bill-action">
-                      <div class="bill-amount text-danger font-bold">${AccountModel.formatCurrency(bill.amountDue)}</div>
-                      <button class="btn btn-xs btn-outline pay-bill-btn" data-account-id="${bill.id}" data-amount="${bill.amountDue}">
-                        Pay Now
-                      </button>
-                    </div>
-                  </div>
-                `).join('')}
+                  `;
+                }).join('')}
               </div>
             `}
           </div>

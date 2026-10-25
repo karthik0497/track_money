@@ -36,7 +36,7 @@ export class FinancialQueryEngine {
                     `• Outstanding Balance: **${AccountModel.formatCurrency(acc.currentOutstanding)}**\n` +
                     `• Available Credit: **${AccountModel.formatCurrency(acc.availableCredit)}** (Limit: ${AccountModel.formatCurrency(acc.creditLimit)})\n` +
                     `• Credit Utilization: **${acc.utilizationRate}%**\n` +
-                    `• Payment Due Date: **${TransactionModel.formatDate(acc.dueDate)}**`,
+                    `• Payment Due Date: **Every ${AccountModel.getNextDueDate(acc).dueDay}th of month (Next: ${TransactionModel.formatDate(AccountModel.getNextDueDate(acc).dateString)})**`,
               type: 'credit_balance',
               data: acc
             };

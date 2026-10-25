@@ -52,7 +52,8 @@ export class AccountModel {
         currentOutstanding: Number(data.openingOutstanding) || 0,
         availableCredit: Math.max(0, (Number(data.creditLimit) || 0) - (Number(data.openingOutstanding) || 0)),
         billingCycle: data.billingCycle || '1st of month',
-        dueDate: data.dueDate || '',
+        dueDay: AccountModel.parseDueDay(data),
+        dueDate: data.dueDate || `${AccountModel.parseDueDay(data)}th of month`,
         interestRate: Number(data.interestRate) || 0,
         currency: data.currency || 'INR',
         description: data.description || '',
@@ -61,6 +62,75 @@ export class AccountModel {
         createdAt: new Date().toISOString()
       };
     }
+  }
+
+  static parseDueDay(account) {
+    if (!account) return 20;
+    if (account.dueDay && Number(account.dueDay) >= 1 && Number(account.dueDay) <= 31) {
+      return Number(account.dueDay);
+    }
+    const dueStr = String(account.dueDate || '').trim();
+    if (dueStr) {
+      const isoMatch = dueStr.match(/^\d{4}-\d{2}-(\d{1,2})/);
+      if (isoMatch) {
+        return parseInt(isoMatch[1], 10);
+      }
+      const numMatch = dueStr.match(/\b(\d{1,2})(?:st|nd|rd|th)?\b/i);
+      if (numMatch) {
+        const d = parseInt(numMatch[1], 10);
+        if (d >= 1 && d <= 31) return d;
+      }
+      const parsedDate = new Date(dueStr);
+      if (!isNaN(parsedDate.getTime())) {
+        return parsedDate.getDate();
+      }
+    }
+    return 20;
+  }
+
+  /**
+   * Calculates the exact Next Payment Due Date for a credit account.
+   * Never needs to be updated every month: automatically rolls over to the current or next month.
+   */
+  static getNextDueDate(account, referenceDate = new Date()) {
+    const dueDay = this.parseDueDay(account);
+    const now = new Date(referenceDate);
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const todayDate = now.getDate();
+
+    let targetYear = year;
+    let targetMonth = month;
+
+    if (todayDate > dueDay) {
+      const isRecentlyOverdue = (todayDate - dueDay) <= 7 && (account.currentOutstanding || 0) > 0;
+      if (!isRecentlyOverdue) {
+        targetMonth = month + 1;
+        if (targetMonth > 11) {
+          targetMonth = 0;
+          targetYear = year + 1;
+        }
+      }
+    }
+
+    const daysInTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+    const validDay = Math.min(dueDay, daysInTargetMonth);
+
+    const nextDueDate = new Date(targetYear, targetMonth, validDay, 23, 59, 59);
+    const todayMidnight = new Date(year, month, todayDate);
+    const dueMidnight = new Date(targetYear, targetMonth, validDay);
+    const diffMs = dueMidnight.getTime() - todayMidnight.getTime();
+    const daysUntilDue = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+    return {
+      date: nextDueDate,
+      dateString: nextDueDate.toISOString().split('T')[0],
+      dueDay: validDay,
+      daysUntilDue,
+      isOverdue: daysUntilDue < 0,
+      isDueToday: daysUntilDue === 0,
+      isDueSoon: daysUntilDue >= 0 && daysUntilDue <= 10
+    };
   }
 
   static formatCurrency(amount, currency = null) {

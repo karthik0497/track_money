@@ -52,10 +52,10 @@ export class AssistantView {
           <!-- Drawer Header -->
           <div class="ai-drawer-header">
             <div class="ai-header-brand">
-              <div class="ai-avatar-circle">✨</div>
+              <div class="ai-avatar-circle" style="background: linear-gradient(135deg, #facc15, #eab308); color: #08080a;">✨</div>
               <div>
-                <h3 class="font-bold">Track-Money AI Assistant</h3>
-                <span class="text-xs text-muted" id="ai-voice-status">100% Offline • Voice & Natural Language</span>
+                <h3 class="font-bold">Track-Money AI Co-Pilot</h3>
+                <span class="text-xs text-muted" id="ai-voice-status">Powered by Google Gemini 3.5 Flash • Real-Time Finance Advisor</span>
               </div>
             </div>
             <div class="ai-header-actions" style="display: flex; align-items: center; gap: 8px;">
@@ -69,18 +69,14 @@ export class AssistantView {
           <!-- Suggested Prompts Strip -->
           <div class="ai-suggestions-carousel">
             <span class="text-xs text-muted" style="margin-right: 6px; align-self: center;">Try:</span>
-            <button class="ai-chip" data-prompt="Create account Bank Saving Account 6599">"Create account Bank Saving Account 6599"</button>
-            <button class="ai-chip" data-prompt="Add credit card ICICI Coral limit 50000">"Add credit card ICICI Coral limit 50k"</button>
-            <button class="ai-chip" data-prompt="Create account Cash 2000">"Create account Cash 2000"</button>
-            <button class="ai-chip" data-prompt="I spent ₹500 for lunch from HDFC bank">"Spent ₹500 for lunch from HDFC"</button>
-            <button class="ai-chip" data-prompt="Yesterday I spent 800 on petrol using my SBI account">"Yesterday 800 petrol SBI"</button>
-            <button class="ai-chip" data-prompt="Add 25,000 salary to HDFC">"Add 25,000 salary to HDFC"</button>
-            <button class="ai-chip" data-prompt="Paid 10,000 towards my HDFC credit card">"Paid 10k towards credit card"</button>
-            <button class="ai-chip" data-prompt="Transfer ₹10,000 from HDFC Bank to SBI Savings">"Transfer 10k HDFC to SBI"</button>
-            <button class="ai-chip" data-prompt="How much did I spend this month?">"How much spent this month?"</button>
-            <button class="ai-chip" data-prompt="What is my HDFC balance?">"HDFC balance"</button>
-            <button class="ai-chip" data-prompt="How much credit card debt do I have?">"Credit card debt"</button>
-            <button class="ai-chip" data-prompt="What was my biggest expense this month?">"Biggest expense this month?"</button>
+            <button class="ai-chip" data-prompt="Where did I spend the most this month?">"Where did I spend most?"</button>
+            <button class="ai-chip" data-prompt="Analyze my spending and suggest what I need to improve">"How can I save more?"</button>
+            <button class="ai-chip" data-prompt="Create category Fitness with red tag">"Create category Fitness"</button>
+            <button class="ai-chip" data-prompt="Show all my transactions for this month">"Say all transactions"</button>
+            <button class="ai-chip" data-prompt="Transfer ₹5,000 from HDFC Bank to ICICI Credit Card">"Transfer 5k to Credit Card"</button>
+            <button class="ai-chip" data-prompt="What is my total Net Position, Assets, and Debts?">"Net Position & Debt"</button>
+            <button class="ai-chip" data-prompt="Spent ₹450 for lunch today from HDFC">"Spent 450 lunch HDFC"</button>
+            <button class="ai-chip" data-prompt="Add 30,000 salary income to Savings">"Add 30k salary"</button>
           </div>
 
           <!-- Chat Conversation Log -->
@@ -433,6 +429,110 @@ export class AssistantView {
           </div>
         </div>
       `;
+    } else if (msg.type === 'gemini_action_card') {
+      const data = msg.data;
+      const act = data.actionType;
+      const params = data.parameters || {};
+
+      let actionTitle = 'Financial Action Ready';
+      let actionBody = '';
+
+      if (act === 'create_category') {
+        actionTitle = 'Create New Category';
+        actionBody = `
+          <div class="confirm-row">
+            <span class="text-muted">Category:</span>
+            <span class="font-bold text-yellow">${this.escapeHtml(params.name)}</span>
+          </div>
+          <div class="confirm-row">
+            <span class="text-muted">Type:</span>
+            <span class="badge ${params.type === 'income' ? 'badge-primary' : 'badge-danger'}">${(params.type || 'expense').toUpperCase()}</span>
+          </div>
+          <div class="confirm-row">
+            <span class="text-muted">Tag & Icon:</span>
+            <span>${params.icon || '🏷️'} <span class="badge" style="background: ${params.color || '#eab308'}25; color: ${params.color || '#eab308'}; border: 1px solid ${params.color || '#eab308'}50;">${params.color || '#eab308'}</span></span>
+          </div>
+        `;
+      } else if (act === 'create_transaction') {
+        actionTitle = `Record ${params.type === 'income' ? 'Income' : 'Expense'}`;
+        actionBody = `
+          <div class="confirm-row">
+            <span class="text-muted">Amount:</span>
+            <span class="font-bold text-xl ${params.type === 'income' ? 'text-yellow' : 'text-red'}">${AccountModel.formatCurrency(params.amount)}</span>
+          </div>
+          <div class="confirm-row">
+            <span class="text-muted">Account:</span>
+            <span class="font-bold">${this.escapeHtml(params.accountName || 'Primary Account')}</span>
+          </div>
+          <div class="confirm-row">
+            <span class="text-muted">Category:</span>
+            <span>${this.escapeHtml(params.category || 'General')} ${params.subcategory ? '• ' + this.escapeHtml(params.subcategory) : ''}</span>
+          </div>
+          <div class="confirm-row">
+            <span class="text-muted">Description:</span>
+            <span>${this.escapeHtml(params.description || 'Logged via AI')}</span>
+          </div>
+        `;
+      } else if (act === 'transfer_money') {
+        actionTitle = params.isCreditCardPayment ? 'Pay Credit Card Bill' : 'Transfer Money';
+        actionBody = `
+          <div class="confirm-row">
+            <span class="text-muted">Amount:</span>
+            <span class="font-bold text-xl text-yellow">${AccountModel.formatCurrency(params.amount)}</span>
+          </div>
+          <div class="confirm-row">
+            <span class="text-muted">From:</span>
+            <span class="font-bold">${this.escapeHtml(params.fromAccount || 'Bank')}</span>
+          </div>
+          <div class="confirm-row">
+            <span class="text-muted">To:</span>
+            <span class="font-bold ${params.isCreditCardPayment ? 'text-red' : ''}">${this.escapeHtml(params.toAccount || 'Card / Account')}</span>
+          </div>
+          <div class="confirm-row">
+            <span class="text-muted">Note:</span>
+            <span>${this.escapeHtml(params.description || '')}</span>
+          </div>
+        `;
+      } else if (act === 'create_account') {
+        actionTitle = 'Create New Account';
+        actionBody = `
+          <div class="confirm-row">
+            <span class="text-muted">Account Name:</span>
+            <span class="font-bold text-yellow">${this.escapeHtml(params.name)}</span>
+          </div>
+          <div class="confirm-row">
+            <span class="text-muted">Category:</span>
+            <span class="badge ${params.category === 'credit' ? 'badge-danger' : 'badge-primary'}">${(params.category || 'debit').toUpperCase()}</span>
+          </div>
+          <div class="confirm-row">
+            <span class="text-muted">${params.category === 'credit' ? 'Credit Limit:' : 'Opening Balance:'}</span>
+            <span class="font-bold text-lg">${AccountModel.formatCurrency(params.category === 'credit' ? params.creditLimit : params.openingBalance)}</span>
+          </div>
+        `;
+      }
+
+      contentHtml = `
+        <div class="msg-bubble confirmation-bubble fade-in">
+          ${msg.text ? `<div style="margin-bottom: 8px;">${this.formatMarkdown(msg.text)}</div>` : ''}
+          <div class="confirm-card-header">
+            <span class="confirm-badge" style="background: rgba(234, 179, 8, 0.15); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.4);">
+              ✨ GEMINI ACTION
+            </span>
+            <strong>${actionTitle}</strong>
+          </div>
+          <div class="confirm-card-body">
+            ${actionBody}
+          </div>
+          <div class="confirm-actions">
+            <button class="btn btn-sm btn-primary gemini-confirm-btn">
+              ✓ Confirm & Apply
+            </button>
+            <button class="btn btn-sm btn-text text-danger gemini-cancel-btn">
+              ✕ Cancel
+            </button>
+          </div>
+        </div>
+      `;
     } else if (msg.type === 'account_choice') {
       contentHtml = `
         <div class="msg-bubble">
@@ -487,6 +587,27 @@ export class AssistantView {
     const confirmBtn = msgElement.querySelector('.confirm-action-btn');
     const editBtn = msgElement.querySelector('.confirm-edit-btn');
     const cancelBtn = msgElement.querySelector('.confirm-cancel-btn');
+
+    const geminiConfirmBtn = msgElement.querySelector('.gemini-confirm-btn');
+    const geminiCancelBtn = msgElement.querySelector('.gemini-cancel-btn');
+
+    if (geminiConfirmBtn) {
+      geminiConfirmBtn.addEventListener('click', async () => {
+        geminiConfirmBtn.disabled = true;
+        const res = await this.coordinator.confirmGeminiAction();
+        if (res) this.renderAiMessage(res);
+        msgContainer.scrollTop = msgContainer.scrollHeight;
+      });
+    }
+
+    if (geminiCancelBtn) {
+      geminiCancelBtn.addEventListener('click', async () => {
+        geminiCancelBtn.disabled = true;
+        const res = await this.coordinator.cancelGeminiAction();
+        if (res) this.renderAiMessage(res);
+        msgContainer.scrollTop = msgContainer.scrollHeight;
+      });
+    }
 
     if (confirmBtn) {
       confirmBtn.addEventListener('click', async () => {

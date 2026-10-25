@@ -89,7 +89,9 @@ class TrackMoneyApp {
     document.querySelectorAll('.nav-item').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const viewName = e.currentTarget.dataset.view;
-        if (viewName === 'more') {
+        if (viewName === 'assistant') {
+          this.openAiAssistant();
+        } else if (viewName === 'more') {
           this.toggleMoreSheet();
         } else if (viewName) {
           this.closeMoreSheet();
@@ -107,11 +109,6 @@ class TrackMoneyApp {
           this.navigateTo(viewName);
         }
       });
-    });
-
-    document.getElementById('nav-camera-scan')?.addEventListener('click', () => {
-      this.closeMoreSheet();
-      this.openCameraScanner();
     });
 
     document.getElementById('nav-voice-assistant')?.addEventListener('click', () => {
@@ -134,16 +131,17 @@ class TrackMoneyApp {
       this.triggerInstallPrompt();
     });
 
+    document.getElementById('header-settings-btn')?.addEventListener('click', () => {
+      this.closeMoreSheet();
+      this.navigateTo('settings');
+    });
+
     document.getElementById('header-profile-btn')?.addEventListener('click', () => {
       this.openProfileModal();
     });
 
     document.getElementById('header-theme-btn')?.addEventListener('click', () => {
       this.toggleTheme();
-    });
-
-    document.getElementById('header-camera-btn')?.addEventListener('click', () => {
-      this.openCameraScanner();
     });
 
     document.getElementById('header-voice-btn')?.addEventListener('click', () => {
@@ -615,10 +613,7 @@ class TrackMoneyApp {
         <div class="modal-card slide-up">
           <div class="modal-header">
             <h3>${isEdit ? 'Edit Transaction' : 'Record Transaction'}</h3>
-            <div style="display: flex; gap: 8px; align-items: center;">
-              ${!isEdit ? '<button type="button" class="btn btn-outline btn-xs" id="tx-scan-receipt-btn" title="Scan receipt with camera">📷 Scan Bill</button>' : ''}
-              <button class="btn btn-icon" id="close-tx-modal">✕</button>
-            </div>
+            <button class="btn btn-icon" id="close-tx-modal">✕</button>
           </div>
           <form id="global-tx-form">
             <div class="form-group">
@@ -705,9 +700,6 @@ class TrackMoneyApp {
       </div>
     `;
 
-    document.getElementById('tx-scan-receipt-btn')?.addEventListener('click', () => {
-      this.openCameraScanner();
-    });
     document.getElementById('close-tx-modal')?.addEventListener('click', () => modalRoot.innerHTML = '');
     document.getElementById('cancel-tx-modal')?.addEventListener('click', () => modalRoot.innerHTML = '');
     document.getElementById('tx-modal-backdrop')?.addEventListener('click', (e) => {
@@ -745,184 +737,254 @@ class TrackMoneyApp {
   }
 
   // Transfer Modal
+  // Universal Transfer & Pay Modal (Savings to Credit Card, Bank to Bank, External Bank)
   async openTransferModal(options = {}) {
     const modalRoot = document.getElementById('global-modal-root');
-    const accounts = await this.storage.getAll('accounts');
+    const accounts = await this.storage.getAccountsWithCalculatedBalances();
     const debitAccounts = accounts.filter(a => a.category === 'debit');
+    const creditAccounts = accounts.filter(a => a.category === 'credit');
 
-    if (debitAccounts.length < 2) {
-      alert('You need at least two debit/asset accounts to make a transfer.');
+    if (debitAccounts.length === 0) {
+      alert('You need at least one savings or bank account to transfer money from.');
       return;
     }
 
-    const defaultFrom = options.fromAccountId || debitAccounts[0].id;
-    const defaultTo = debitAccounts.find(a => a.id !== defaultFrom)?.id || debitAccounts[1].id;
+    // Determine initial mode: 'bank_to_bank', 'pay_card', 'external_bank'
+    let currentMode = options.mode || (options.toAccountId && creditAccounts.some(c => c.id === options.toAccountId) ? 'pay_card' : (debitAccounts.length > 1 ? 'bank_to_bank' : (creditAccounts.length > 0 ? 'pay_card' : 'external_bank')));
 
-    modalRoot.innerHTML = `
-      <div class="modal-backdrop fade-in" id="transfer-modal-backdrop">
-        <div class="modal-card slide-up">
-          <div class="modal-header">
-            <h3>Transfer Between Accounts</h3>
-            <button class="btn btn-icon" id="close-transfer-modal">✕</button>
-          </div>
-          <form id="transfer-form">
-            <div class="form-group">
-              <label>Amount to Transfer (₹)</label>
-              <input type="number" name="amount" class="form-input font-bold" style="font-size: 1.25rem;" 
-                     placeholder="0.00" min="1" step="any" required autofocus>
+    const defaultFrom = options.fromAccountId || debitAccounts[0]?.id;
+    let defaultToCard = options.toAccountId && creditAccounts.some(c => c.id === options.toAccountId) ? options.toAccountId : creditAccounts[0]?.id;
+    let defaultToDebit = options.toAccountId && debitAccounts.some(d => d.id === options.toAccountId && d.id !== defaultFrom) 
+      ? options.toAccountId 
+      : (debitAccounts.find(a => a.id !== defaultFrom)?.id || debitAccounts[0]?.id);
+
+    const initialAmount = options.amount || '';
+
+    const renderModalContent = () => {
+      modalRoot.innerHTML = `
+        <div class="modal-backdrop fade-in" id="transfer-modal-backdrop">
+          <div class="modal-card slide-up" style="max-width: 520px;">
+            <div class="modal-header">
+              <div class="flex-align-center" style="gap: 8px;">
+                <span class="text-xl">⇄</span>
+                <h3 class="font-bold">Transfer & Pay</h3>
+              </div>
+              <button class="btn btn-icon" id="close-transfer-modal">✕</button>
             </div>
 
-            <div class="grid-2-col">
+            <!-- Mode Selector Tabs -->
+            <div class="tabs-segmented" style="margin-bottom: 1.25rem;">
+              <button type="button" class="tab-btn ${currentMode === 'bank_to_bank' ? 'active' : ''}" id="tab-mode-internal">
+                🏦 Bank to Bank
+              </button>
+              <button type="button" class="tab-btn ${currentMode === 'pay_card' ? 'active' : ''}" id="tab-mode-card">
+                💳 Pay Credit Card
+              </button>
+              <button type="button" class="tab-btn ${currentMode === 'external_bank' ? 'active' : ''}" id="tab-mode-external">
+                🌐 Any Bank / Person
+              </button>
+            </div>
+
+            <form id="transfer-form">
+              <!-- Amount Input -->
               <div class="form-group">
-                <label>From Account (Debit)</label>
+                <label class="text-xs text-muted font-bold">AMOUNT TO TRANSFER</label>
+                <div style="position: relative;">
+                  <span style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-weight: 800; font-size: 1.35rem; color: var(--color-primary);">₹</span>
+                  <input type="number" name="amount" id="transfer-amount-input" class="form-input font-bold" 
+                         style="padding-left: 36px; font-size: 1.4rem; color: var(--text-yellow);" 
+                         placeholder="0.00" value="${initialAmount}" min="1" step="any" required autofocus>
+                </div>
+              </div>
+
+              <!-- From Account -->
+              <div class="form-group">
+                <label class="text-xs text-muted font-bold">FROM ACCOUNT (SAVINGS / BANK / CASH)</label>
                 <select name="fromAccountId" id="from-acc-select" class="form-input" required>
                   ${debitAccounts.map(a => `
-                    <option value="${a.id}" ${a.id === defaultFrom ? 'selected' : ''}>${a.name}</option>
+                    <option value="${a.id}" ${a.id === defaultFrom ? 'selected' : ''}>
+                      ${a.name} — Balance: ${AccountModel.formatCurrency(a.currentBalance)}
+                    </option>
                   `).join('')}
                 </select>
               </div>
 
-              <div class="form-group">
-                <label>To Account (Credit)</label>
-                <select name="toAccountId" id="to-acc-select" class="form-input" required>
-                  ${debitAccounts.map(a => `
-                    <option value="${a.id}" ${a.id === defaultTo ? 'selected' : ''}>${a.name}</option>
-                  `).join('')}
-                </select>
+              <!-- Destination Mode Fields -->
+              ${currentMode === 'pay_card' ? `
+                <div class="form-group">
+                  <label class="text-xs text-muted font-bold">TO CREDIT CARD (BILL PAYOFF)</label>
+                  ${creditAccounts.length > 0 ? `
+                    <select name="toAccountId" id="to-acc-select" class="form-input" required>
+                      ${creditAccounts.map(a => `
+                        <option value="${a.id}" ${a.id === defaultToCard ? 'selected' : ''}>
+                          ${a.name} — Outstanding Due: ${AccountModel.formatCurrency(a.currentOutstanding)} (Limit: ${AccountModel.formatCurrency(a.creditLimit)})
+                        </option>
+                      `).join('')}
+                    </select>
+                    <div style="margin-top: 6px; font-size: 0.75rem; color: var(--color-warning);">
+                      ⚡ This payment will decrease your credit card debt and restore your available limit immediately.
+                    </div>
+                  ` : `
+                    <div class="card" style="padding: 10px; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3); font-size: 0.82rem;">
+                      No credit card accounts found. Add a credit card in Accounts first.
+                    </div>
+                  `}
+                </div>
+              ` : currentMode === 'bank_to_bank' ? `
+                <div class="form-group">
+                  <label class="text-xs text-muted font-bold">TO MY ACCOUNT (DEBIT / ASSET)</label>
+                  <select name="toAccountId" id="to-acc-select" class="form-input" required>
+                    ${debitAccounts.map(a => `
+                      <option value="${a.id}" ${a.id === defaultToDebit ? 'selected' : ''}>
+                        ${a.name} — Current: ${AccountModel.formatCurrency(a.currentBalance)}
+                      </option>
+                    `).join('')}
+                  </select>
+                </div>
+              ` : `
+                <div class="form-group">
+                  <label class="text-xs text-muted font-bold">TO EXTERNAL BENEFICIARY / ANY BANK</label>
+                  <input type="text" name="externalBeneficiary" class="form-input" 
+                         placeholder="Beneficiary Name / External Bank / UPI ID" required>
+                  <div style="margin-top: 6px; font-size: 0.75rem; color: var(--text-muted);">
+                    Transfers to external banks or outside recipients will be recorded as a bank transfer out.
+                  </div>
+                </div>
+              `}
+
+              <!-- Date & Description -->
+              <div class="grid-2-col">
+                <div class="form-group">
+                  <label class="text-xs text-muted font-bold">DATE</label>
+                  <input type="date" name="date" class="form-input" value="${new Date().toISOString().split('T')[0]}" required>
+                </div>
+                <div class="form-group">
+                  <label class="text-xs text-muted font-bold">REFERENCE / NOTE</label>
+                  <input type="text" name="description" class="form-input" placeholder="e.g. Card bill, rent, transfer">
+                </div>
               </div>
-            </div>
 
-            <div class="form-group">
-              <label>Transfer Date</label>
-              <input type="date" name="date" class="form-input" value="${new Date().toISOString().split('T')[0]}" required>
-            </div>
-
-            <div class="form-group">
-              <label>Description / Note</label>
-              <input type="text" name="description" class="form-input" placeholder="e.g. Moved to Savings Fund">
-            </div>
-
-            <div class="modal-footer">
-              <button type="button" class="btn btn-outline" id="cancel-transfer-modal">Cancel</button>
-              <button type="submit" class="btn btn-primary">Complete Transfer</button>
-            </div>
-          </form>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-outline" id="cancel-transfer-modal">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="btn-submit-transfer">
+                  ${currentMode === 'pay_card' ? '💳 Pay Card Bill' : '⇄ Complete Transfer'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
-      </div>
-    `;
+      `;
 
-    document.getElementById('close-transfer-modal')?.addEventListener('click', () => modalRoot.innerHTML = '');
-    document.getElementById('cancel-transfer-modal')?.addEventListener('click', () => modalRoot.innerHTML = '');
-
-    document.getElementById('transfer-form')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const fd = new FormData(e.target);
-      const fromId = fd.get('fromAccountId');
-      const toId = fd.get('toAccountId');
-      const amount = Number(fd.get('amount'));
-
-      if (fromId === toId) {
-        alert('Source and destination accounts must be different.');
-        return;
-      }
-
-      const fromAcc = accounts.find(a => a.id === fromId);
-      const toAcc = accounts.find(a => a.id === toId);
-
-      await this.storage.addTransaction({
-        type: 'transfer',
-        accountId: fromId,
-        targetAccountId: toId,
-        amount,
-        category: 'Transfer',
-        subcategory: 'Account Transfer',
-        description: fd.get('description') || `Transfer: ${fromAcc?.name} ➔ ${toAcc?.name}`,
-        date: fd.get('date'),
-        paymentMethod: 'Bank Transfer'
+      // Event handlers for mode toggling
+      document.getElementById('tab-mode-internal')?.addEventListener('click', () => {
+        currentMode = 'bank_to_bank';
+        renderModalContent();
+      });
+      document.getElementById('tab-mode-card')?.addEventListener('click', () => {
+        currentMode = 'pay_card';
+        renderModalContent();
+      });
+      document.getElementById('tab-mode-external')?.addEventListener('click', () => {
+        currentMode = 'external_bank';
+        renderModalContent();
       });
 
-      modalRoot.innerHTML = '';
-      await this.refreshCurrentView();
-      this.showToast(`Transferred ${AccountModel.formatCurrency(amount)} successfully!`);
-    });
+      document.getElementById('close-transfer-modal')?.addEventListener('click', () => modalRoot.innerHTML = '');
+      document.getElementById('cancel-transfer-modal')?.addEventListener('click', () => modalRoot.innerHTML = '');
+
+      // Form submit handler
+      document.getElementById('transfer-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        const fromId = fd.get('fromAccountId');
+        const amount = Number(fd.get('amount'));
+        const date = fd.get('date');
+        const customDesc = fd.get('description');
+        const fromAcc = accounts.find(a => a.id === fromId);
+
+        if (!fromAcc) {
+          alert('Please select a valid source account.');
+          return;
+        }
+
+        if (currentMode === 'pay_card') {
+          const toId = fd.get('toAccountId');
+          const cardAcc = accounts.find(a => a.id === toId);
+          if (!cardAcc) {
+            alert('Please select a credit card account to pay.');
+            return;
+          }
+
+          await this.storage.addTransaction({
+            type: 'credit_card_payment',
+            accountId: fromId,
+            targetAccountId: toId,
+            amount,
+            category: 'Bills & Utilities',
+            subcategory: 'Credit Card Bill',
+            description: customDesc || `Card Bill Payment: ${fromAcc.name} ➔ ${cardAcc.name}`,
+            date,
+            paymentMethod: 'Net Banking'
+          });
+
+          modalRoot.innerHTML = '';
+          await this.refreshCurrentView();
+          this.showToast(`Paid ${AccountModel.formatCurrency(amount)} towards ${cardAcc.name} successfully!`);
+
+        } else if (currentMode === 'bank_to_bank') {
+          const toId = fd.get('toAccountId');
+          if (fromId === toId) {
+            alert('Source and destination accounts must be different.');
+            return;
+          }
+          const toAcc = accounts.find(a => a.id === toId);
+
+          await this.storage.addTransaction({
+            type: 'transfer',
+            accountId: fromId,
+            targetAccountId: toId,
+            amount,
+            category: 'Transfer',
+            subcategory: 'Account Transfer',
+            description: customDesc || `Transfer: ${fromAcc.name} ➔ ${toAcc?.name}`,
+            date,
+            paymentMethod: 'Bank Transfer'
+          });
+
+          modalRoot.innerHTML = '';
+          await this.refreshCurrentView();
+          this.showToast(`Transferred ${AccountModel.formatCurrency(amount)} successfully!`);
+
+        } else if (currentMode === 'external_bank') {
+          const externalBeneficiary = fd.get('externalBeneficiary') || 'External Bank';
+
+          await this.storage.addTransaction({
+            type: 'expense',
+            accountId: fromId,
+            amount,
+            category: 'Transfer',
+            subcategory: 'External Transfer',
+            description: customDesc || `Sent to: ${externalBeneficiary} (via ${fromAcc.name})`,
+            date,
+            paymentMethod: 'UPI / Net Banking'
+          });
+
+          modalRoot.innerHTML = '';
+          await this.refreshCurrentView();
+          this.showToast(`Transferred ${AccountModel.formatCurrency(amount)} to ${externalBeneficiary} successfully!`);
+        }
+      });
+    };
+
+    renderModalContent();
   }
 
   // Credit Card Payment Modal
   async openCreditCardPayModal(cardId, suggestedAmount) {
-    const modalRoot = document.getElementById('global-modal-root');
-    const accounts = await this.storage.getAll('accounts');
-    const creditAccount = accounts.find(a => a.id === cardId);
-    const debitAccounts = accounts.filter(a => a.category === 'debit');
-
-    modalRoot.innerHTML = `
-      <div class="modal-backdrop fade-in" id="pay-bill-backdrop">
-        <div class="modal-card slide-up">
-          <div class="modal-header">
-            <h3>Pay Credit Card Bill</h3>
-            <button class="btn btn-icon" id="close-pay-bill">✕</button>
-          </div>
-          <form id="pay-bill-form">
-            <div class="form-group">
-              <label>Card / BNPL Account</label>
-              <div class="card" style="padding: 12px; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3);">
-                <div class="font-bold">${creditAccount?.name}</div>
-                <div class="text-xs text-muted">Outstanding: <span class="text-danger font-bold">${AccountModel.formatCurrency(creditAccount?.currentOutstanding || suggestedAmount)}</span></div>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label>Amount to Pay (₹)</label>
-              <input type="number" name="amount" class="form-input font-bold" style="font-size: 1.25rem;" 
-                     value="${suggestedAmount || creditAccount?.currentOutstanding || ''}" min="1" step="any" required autofocus>
-            </div>
-
-            <div class="form-group">
-              <label>Pay From Bank Account</label>
-              <select name="fromAccountId" class="form-input" required>
-                ${debitAccounts.map(a => `
-                  <option value="${a.id}">${a.name} (Bal: ${AccountModel.formatCurrency(a.currentBalance)})</option>
-                `).join('')}
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label>Payment Date</label>
-              <input type="date" name="date" class="form-input" value="${new Date().toISOString().split('T')[0]}" required>
-            </div>
-
-            <div class="modal-footer">
-              <button type="button" class="btn btn-outline" id="cancel-pay-bill">Cancel</button>
-              <button type="submit" class="btn btn-primary">Submit Card Payment</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    `;
-
-    document.getElementById('close-pay-bill')?.addEventListener('click', () => modalRoot.innerHTML = '');
-    document.getElementById('cancel-pay-bill')?.addEventListener('click', () => modalRoot.innerHTML = '');
-
-    document.getElementById('pay-bill-form')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const fd = new FormData(e.target);
-      const fromId = fd.get('fromAccountId');
-      const amount = Number(fd.get('amount'));
-
-      await this.storage.addTransaction({
-        type: 'credit_card_payment',
-        accountId: fromId,
-        targetAccountId: cardId,
-        amount,
-        category: 'Bills & Utilities',
-        subcategory: 'Credit Card Bill',
-        description: `Payment towards ${creditAccount?.name}`,
-        date: fd.get('date'),
-        paymentMethod: 'Net Banking'
-      });
-
-      modalRoot.innerHTML = '';
-      await this.refreshCurrentView();
-      this.showToast(`Paid ${AccountModel.formatCurrency(amount)} towards ${creditAccount?.name}!`);
+    return this.openTransferModal({
+      mode: 'pay_card',
+      toAccountId: cardId,
+      amount: suggestedAmount
     });
   }
 
@@ -992,5 +1054,6 @@ class TrackMoneyApp {
 // Initialize on DOM load
 window.addEventListener('DOMContentLoaded', () => {
   const app = new TrackMoneyApp();
+  window.app = app;
   app.init();
 });

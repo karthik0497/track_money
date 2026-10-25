@@ -98,50 +98,27 @@ export class AccountsView {
               <span class="text-xs text-muted">${debitAccounts.length} active</span>
             </div>
 
-            <div class="accounts-card-grid">
+            <div class="accounts-compact-list">
               ${debitAccounts.map(acc => `
-                <div class="card account-card debit-card" data-account-id="${acc.id}">
-                  <div class="card-top-row">
-                    <div class="acc-brand">
-                      <div class="acc-icon-box" style="background: ${acc.color}25; color: ${acc.color};">
-                        ${acc.icon || '🏦'}
-                      </div>
-                      <div>
-                        <h4 class="acc-name">${acc.name}</h4>
-                        <span class="badge badge-subtle text-xs">${acc.type}</span>
-                      </div>
+                <div class="account-compact-row debit-row" data-account-id="${acc.id}">
+                  <div class="acc-compact-left">
+                    <div class="acc-icon-box" style="background: ${acc.color}25; color: ${acc.color};">
+                      ${acc.icon || '🏦'}
                     </div>
-                    <div style="display: flex; gap: 6px; align-items: center;">
-                      <button class="btn btn-icon btn-sm edit-acc-btn" data-id="${acc.id}" title="Edit Account">✏️</button>
-                      <button class="btn btn-icon btn-sm view-acc-btn" data-id="${acc.id}" title="View Details">➔</button>
+                    <div class="acc-meta">
+                      <div class="acc-name">${acc.name}</div>
+                      <div class="acc-type-text">${acc.type}</div>
                     </div>
                   </div>
-
-                  <div class="acc-balance-block">
-                    <span class="balance-label">Current Balance</span>
-                    <div class="balance-number text-success">
-                      ${AccountModel.formatCurrency(acc.currentBalance)}
+                  <div class="acc-compact-right">
+                    <div class="acc-amount-col">
+                      <div class="acc-val text-yellow">${AccountModel.formatCurrency(acc.currentBalance)}</div>
+                      <div class="acc-sub-val text-muted">In: +${AccountModel.formatCurrency(acc.totalIncome)}</div>
                     </div>
-                  </div>
-
-                  <div class="acc-footer-stats">
-                    <div class="acc-stat-col">
-                      <span class="text-xs text-muted">Income</span>
-                      <span class="font-bold text-xs text-success">+${AccountModel.formatCurrency(acc.totalIncome)}</span>
+                    <div class="acc-actions-row">
+                      <button class="btn btn-xs btn-outline quick-transfer" data-id="${acc.id}" title="Transfer money from this account">⇄ Send</button>
+                      <button class="btn btn-icon btn-xs view-acc-btn" data-id="${acc.id}" title="View Details">➔</button>
                     </div>
-                    <div class="acc-stat-col">
-                      <span class="text-xs text-muted">Spent</span>
-                      <span class="font-bold text-xs text-danger">-${AccountModel.formatCurrency(acc.totalSpent)}</span>
-                    </div>
-                    <div class="acc-stat-col">
-                      <span class="text-xs text-muted">Opening</span>
-                      <span class="font-bold text-xs">${AccountModel.formatCurrency(acc.openingBalance)}</span>
-                    </div>
-                  </div>
-
-                  <div class="card-quick-actions">
-                    <button class="btn btn-xs btn-outline quick-add-tx" data-id="${acc.id}">+ Expense/Income</button>
-                    <button class="btn btn-xs btn-outline quick-transfer" data-id="${acc.id}">Transfer</button>
                   </div>
                 </div>
               `).join('')}
@@ -151,7 +128,7 @@ export class AccountsView {
 
         <!-- SECTION B: Credit / Liability Accounts -->
         ${(this.activeTab === 'all' || this.activeTab === 'credit') && creditAccounts.length > 0 ? `
-          <div class="account-section" style="margin-top: 2rem;">
+          <div class="account-section" style="margin-top: 1.25rem;">
             <div class="section-title">
               <div class="title-with-icon">
                 <span class="section-badge badge-danger">LIABILITIES</span>
@@ -160,73 +137,38 @@ export class AccountsView {
               <span class="text-xs text-muted">${creditAccounts.length} active</span>
             </div>
 
-            <div class="accounts-card-grid">
+            <div class="accounts-compact-list">
               ${creditAccounts.map(acc => {
                 const util = Number(acc.utilizationRate) || 0;
+                const dueInfo = AccountModel.getNextDueDate(acc);
+                let dueBadge = '';
+                if (dueInfo.isOverdue) {
+                  dueBadge = `<span class="badge badge-danger" style="padding:1px 5px; font-size: 0.65rem;">🚨 Overdue</span>`;
+                } else if (dueInfo.isDueToday) {
+                  dueBadge = `<span class="badge badge-warning" style="padding:1px 5px; font-size: 0.65rem;">⚠️ Due Today</span>`;
+                } else if (dueInfo.isDueSoon) {
+                  dueBadge = `<span class="badge badge-warning" style="padding:1px 5px; font-size: 0.65rem;">⏳ Due in ${dueInfo.daysUntilDue}d</span>`;
+                }
                 return `
-                  <div class="card account-card credit-card" data-account-id="${acc.id}">
-                    <div class="card-top-row">
-                      <div class="acc-brand">
-                        <div class="acc-icon-box" style="background: ${acc.color}25; color: ${acc.color};">
-                          ${acc.icon || '💳'}
-                        </div>
-                        <div>
-                          <h4 class="acc-name">${acc.name}</h4>
-                          <span class="badge badge-subtle text-xs">${acc.type}</span>
-                        </div>
+                  <div class="account-compact-row credit-row" data-account-id="${acc.id}">
+                    <div class="acc-compact-left">
+                      <div class="acc-icon-box" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">
+                        ${acc.icon || '💳'}
                       </div>
-                      <div style="display: flex; gap: 6px; align-items: center;">
-                        <span class="badge ${util > 30 ? 'badge-warning' : 'badge-success'}">${util}% util</span>
-                        <button class="btn btn-icon btn-sm edit-acc-btn" data-id="${acc.id}" title="Edit Account">✏️</button>
-                        <button class="btn btn-icon btn-sm view-acc-btn" data-id="${acc.id}" title="View Details">➔</button>
+                      <div class="acc-meta">
+                        <div class="acc-name">${acc.name}</div>
+                        <div class="acc-type-text">${acc.type} • Due ${dueInfo.dueDay}th • <span class="${util > 30 ? 'text-red font-bold' : 'text-muted'}">${util}% util</span> ${dueBadge}</div>
                       </div>
                     </div>
-
-                    <div class="credit-card-balances">
-                      <div>
-                        <span class="balance-label">Outstanding Balance</span>
-                        <div class="balance-number text-danger">
-                          ${AccountModel.formatCurrency(acc.currentOutstanding)}
-                        </div>
+                    <div class="acc-compact-right">
+                      <div class="acc-amount-col">
+                        <div class="acc-val text-red">${AccountModel.formatCurrency(acc.currentOutstanding)}</div>
+                        <div class="acc-sub-val text-muted">Avail: ${AccountModel.formatCurrency(acc.availableCredit)}</div>
                       </div>
-                      <div style="text-align: right;">
-                        <span class="balance-label">Available Credit</span>
-                        <div class="balance-number text-success" style="font-size: 1.15rem;">
-                          ${AccountModel.formatCurrency(acc.availableCredit)}
-                        </div>
+                      <div class="acc-actions-row">
+                        <button class="btn btn-xs btn-primary quick-pay-bill" data-id="${acc.id}" data-amount="${acc.currentOutstanding}" title="Pay Card Bill from Bank">💳 Pay</button>
+                        <button class="btn btn-icon btn-xs view-acc-btn" data-id="${acc.id}" title="View Details">➔</button>
                       </div>
-                    </div>
-
-                    <!-- Progress bar for credit limit utilization -->
-                    <div class="util-progress-bar">
-                      <div class="util-fill ${util > 30 ? 'bg-warning' : 'bg-danger'}" style="width: ${Math.min(100, util)}%;"></div>
-                    </div>
-
-                    <div class="acc-footer-stats">
-                      <div class="acc-stat-col">
-                        <span class="text-xs text-muted">Total Limit</span>
-                        <span class="font-bold text-xs">${AccountModel.formatCurrency(acc.creditLimit)}</span>
-                      </div>
-                      <div class="acc-stat-col">
-                        <span class="text-xs text-muted">Due Date</span>
-                        <span class="font-bold text-xs text-warning">${acc.dueDate ? TransactionModel.formatDate(acc.dueDate) : 'N/A'}</span>
-                      </div>
-                      <div class="acc-stat-col">
-                        <span class="text-xs text-muted">Cycle</span>
-                        <span class="font-bold text-xs">${acc.billingCycle || 'Monthly'}</span>
-                      </div>
-                    </div>
-
-                    <div class="card-quick-actions">
-                      <button class="btn btn-xs btn-primary quick-pay-bill" data-id="${acc.id}" data-amount="${acc.currentOutstanding}">
-                        💳 Pay Bill
-                      </button>
-                      <button class="btn btn-xs btn-outline quick-add-tx" data-id="${acc.id}">
-                        + Add Spend
-                      </button>
-                      <button class="btn btn-xs btn-text view-acc-btn" data-id="${acc.id}">
-                        Details →
-                      </button>
                     </div>
                   </div>
                 `;
@@ -298,7 +240,7 @@ export class AccountsView {
                 </div>
                 <div class="detail-meta-row" style="margin-top: 0.5rem;">
                   <span>Utilization: <strong>${acc.utilizationRate}%</strong></span>
-                  <span>Due Date: <strong>${acc.dueDate ? TransactionModel.formatDate(acc.dueDate) : 'N/A'}</strong></span>
+                  <span>Due Date: <strong>Every ${AccountModel.getNextDueDate(acc).dueDay}th (${TransactionModel.formatDate(AccountModel.getNextDueDate(acc).dateString)})</strong></span>
                   <span>Billing Cycle: <strong>${acc.billingCycle || 'Monthly'}</strong></span>
                 </div>
               ` : `
@@ -602,8 +544,17 @@ export class AccountsView {
                   </div>
                   <div class="form-compact-grid">
                     <div class="form-group" style="margin-bottom: 0;">
-                      <label>Payment Due Date</label>
-                      <input type="date" name="dueDate" class="form-input">
+                      <label style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>Payment Due Day <span class="text-warning">*</span></span>
+                        <span class="text-xs text-muted">Recurring Monthly</span>
+                      </label>
+                      <select name="dueDay" class="form-input font-bold" id="acc-due-day-select">
+                        <option value="">Select Due Day...</option>
+                        ${Array.from({length: 31}, (_, i) => i + 1).map(d => `
+                          <option value="${d}">${d}${['st','nd','rd'][((d+90)%100-10)%10-1] || 'th'} of every month</option>
+                        `).join('')}
+                      </select>
+                      <span class="text-xs text-muted" style="display: block; margin-top: 2px;">Reminds you 10 days before automatically every month</span>
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
                       <label>Billing Cycle / Statement Date</label>
@@ -696,8 +647,11 @@ export class AccountsView {
         if (openOutInput && (prefill.openingOutstanding !== undefined && prefill.openingOutstanding !== null)) {
           openOutInput.value = prefill.openingOutstanding;
         }
-        const dueInput = form.querySelector('input[name="dueDate"]');
-        if (dueInput && prefill.dueDate) dueInput.value = prefill.dueDate;
+        const dueSelect = form.querySelector('#acc-due-day-select');
+        if (dueSelect) {
+          const parsedDay = AccountModel.parseDueDay(prefill);
+          dueSelect.value = String(parsedDay);
+        }
         const billingInput = form.querySelector('input[name="billingCycle"]');
         if (billingInput && prefill.billingCycle) billingInput.value = prefill.billingCycle;
       }
@@ -743,6 +697,9 @@ export class AccountsView {
       const rawLimit = formData.get('creditLimit');
       const limitVal = isCredit ? (rawLimit !== null && rawLimit !== '' ? Number(rawLimit) : 0) : 0;
 
+      const selectedDueDay = parseInt(formData.get('dueDay'), 10) || AccountModel.parseDueDay(prefill || {});
+      const dueDateStr = `${selectedDueDay}th of month`;
+
       if (editAccountId) {
         const updatePayload = {
           name: (formData.get('name') || '').trim(),
@@ -752,7 +709,8 @@ export class AccountsView {
           institution: formData.get('institution') || '',
           creditLimit: limitVal,
           openingOutstanding: isCredit ? (Number(formData.get('openingOutstanding')) || 0) : 0,
-          dueDate: formData.get('dueDate') || '',
+          dueDay: selectedDueDay,
+          dueDate: dueDateStr,
           billingCycle: formData.get('billingCycle') || '',
           description: formData.get('description') || ''
         };
@@ -776,7 +734,8 @@ export class AccountsView {
         institution: formData.get('institution') || '',
         creditLimit: limitVal,
         openingOutstanding: isCredit ? (Number(formData.get('openingOutstanding')) || 0) : 0,
-        dueDate: formData.get('dueDate') || '',
+        dueDay: selectedDueDay,
+        dueDate: dueDateStr,
         billingCycle: formData.get('billingCycle') || '',
         description: formData.get('description') || ''
       });
