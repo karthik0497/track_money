@@ -33,7 +33,7 @@ export const PAYMENT_METHODS = [
 export class TransactionModel {
   static formatAmount(amount, type, currency = '₹') {
     const num = Number(amount) || 0;
-    const formatted = currency + ' ' + num.toLocaleString('en-IN', {
+    const formatted = currency + '\u00A0' + num.toLocaleString('en-IN', {
       maximumFractionDigits: 2,
       minimumFractionDigits: 0
     });

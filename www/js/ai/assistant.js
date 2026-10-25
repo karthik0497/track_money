@@ -24,13 +24,14 @@ export class AssistantCoordinator {
       timestamp: Date.now()
     });
 
-    const accounts = await this.storage.getAccountsWithCalculatedBalances();
-    const categories = await this.storage.getAll('categories');
-
-    // Check if user is replying to a pending question (e.g. account selection or confirm)
+    // Fast-path: Check if user is confirming or cancelling an active action
     if (this.pendingAction) {
-      const handled = await this.handlePendingClarification(text, accounts);
-      if (handled) return handled;
+      const clean = text.toLowerCase().trim();
+      const isSimpleConfirmOrCancel = ['yes', 'confirm', 'yup', 'correct', 'ok', 'okay', 'save', 'add', 'sure', 'create', 'create it', 'yes please', 'do it', 'proceed', 'apply', 'no', 'cancel', 'stop', 'nevermind', 'dont', 'dismiss'].some(w => clean.includes(w));
+      if (isSimpleConfirmOrCancel) {
+        const handled = await this.handlePendingClarification(text, []);
+        if (handled) return handled;
+      }
     }
 
     // --- 1. GOOGLE GEMINI GENERATIVE AI (Primary Intelligence) ---
@@ -56,8 +57,19 @@ export class AssistantCoordinator {
       }
     }
 
-    // --- 2. LOCAL OFFLINE NLU & QUERY FALLBACK ---
-    // Parse input using NLU engine
+    // --- 2. LOCAL OFFLINE NLU & QUERY FALLBACK (Lazy-loaded on demand) ---
+    const [accounts, categories] = await Promise.all([
+      this.storage.getAccountsWithCalculatedBalances(),
+      this.storage.getAll('categories')
+    ]);
+
+    // Handle any account selection clarification if pending
+    if (this.pendingAction) {
+      const handled = await this.handlePendingClarification(text, accounts);
+      if (handled) return handled;
+    }
+
+    // Parse input using local NLU engine
     const nluResult = NLUEngine.parse(text, accounts, categories);
 
     // 0. Create Account Intent: Directly create and save to local IndexedDB

@@ -138,7 +138,7 @@ export class AccountModel {
     const activeCurrency = currency || localStorage.getItem('tm_currency') || '₹';
     // Format according to standard currency locale
     const locale = activeCurrency === '₹' ? 'en-IN' : 'en-US';
-    return activeCurrency + ' ' + num.toLocaleString(locale, {
+    return activeCurrency + '\u00A0' + num.toLocaleString(locale, {
       maximumFractionDigits: 2,
       minimumFractionDigits: 0
     });

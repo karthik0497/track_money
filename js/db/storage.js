@@ -6,7 +6,16 @@ export class StorageEngine {
   constructor() {
     this.db = null;
     this.isReady = false;
+    this._cachedAccountsWithBalances = null;
+    this._cachedDashboardMetrics = null;
+    this._cachedAiContext = null;
     this.readyPromise = this.init();
+  }
+
+  _invalidateCache() {
+    this._cachedAccountsWithBalances = null;
+    this._cachedDashboardMetrics = null;
+    this._cachedAiContext = null;
   }
 
   async init() {
@@ -310,6 +319,9 @@ export class StorageEngine {
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
     });
+    if (storeName === STORES.ACCOUNTS || storeName === STORES.TRANSACTIONS || storeName === STORES.CATEGORIES) {
+      this._invalidateCache();
+    }
     this.scheduleEmergencySnapshot();
     return res;
   }
@@ -323,6 +335,9 @@ export class StorageEngine {
       req.onsuccess = () => resolve(true);
       req.onerror = () => reject(req.error);
     });
+    if (storeName === STORES.ACCOUNTS || storeName === STORES.TRANSACTIONS || storeName === STORES.CATEGORIES) {
+      this._invalidateCache();
+    }
     this.scheduleEmergencySnapshot();
     return res;
   }
@@ -337,6 +352,7 @@ export class StorageEngine {
   async clear(storeName) {
     if (!this.db) await this.readyPromise;
     if (!this.db.objectStoreNames.contains(storeName)) return true;
+    this._invalidateCache();
     return new Promise((resolve, reject) => {
       const tx = this.db.transaction(storeName, 'readwrite');
       const store = tx.objectStore(storeName);
@@ -444,83 +460,83 @@ export class StorageEngine {
     return true;
   }
 
-  // Account Operations & Dynamic Balance Calculations
+  // Account Operations & Dynamic Balance Calculations (Optimized O(A+T) Single-Pass)
   async getAccountsWithCalculatedBalances() {
+    if (this._cachedAccountsWithBalances) {
+      return this._cachedAccountsWithBalances;
+    }
     if (!this.db) await this.readyPromise;
-    const accounts = await this.getAll(STORES.ACCOUNTS);
-    const transactions = await this.getAll(STORES.TRANSACTIONS);
+    const [accounts, transactions] = await Promise.all([
+      this.getAll(STORES.ACCOUNTS),
+      this.getAll(STORES.TRANSACTIONS)
+    ]);
 
-    return accounts.map(acc => {
+    const accMap = {};
+    for (const a of accounts) {
+      accMap[a.id] = {
+        totalIncome: 0,
+        totalSpent: 0,
+        totalTransfersIn: 0,
+        totalTransfersOut: 0,
+        totalPaymentsMade: 0,
+        totalRefunds: 0
+      };
+    }
+
+    for (const tx of transactions) {
+      const amt = Number(tx.amount) || 0;
+      const src = accMap[tx.accountId];
+      const tgt = tx.targetAccountId ? accMap[tx.targetAccountId] : null;
+
+      if (src) {
+        if (tx.type === 'income' || tx.type === 'adjustment') {
+          src.totalIncome += amt;
+        } else if (tx.type === 'expense' || tx.type === 'purchase') {
+          src.totalSpent += amt;
+        } else if (tx.type === 'transfer') {
+          src.totalTransfersOut += amt;
+        } else if (tx.type === 'credit_card_payment') {
+          src.totalSpent += amt;
+        } else if (tx.type === 'refund') {
+          src.totalRefunds += amt;
+        }
+      }
+
+      if (tgt) {
+        if (tx.type === 'transfer' || tx.type === 'adjustment') {
+          tgt.totalTransfersIn += amt;
+        } else if (tx.type === 'credit_card_payment') {
+          tgt.totalPaymentsMade += amt;
+        }
+      }
+    }
+
+    const calculated = accounts.map(acc => {
       const accCopy = { ...acc };
-      let totalIncome = 0;
-      let totalSpent = 0;
-      let totalTransfersIn = 0;
-      let totalTransfersOut = 0;
-      let totalPaymentsMade = 0;
-      let totalRefunds = 0;
-
-      // Scan all transactions affecting this account
-      transactions.forEach(tx => {
-        const amt = Number(tx.amount) || 0;
-
-        // Debit / Asset Account Logic
-        if (acc.category === 'debit') {
-          if (tx.accountId === acc.id) {
-            if (tx.type === 'income') {
-              totalIncome += amt;
-            } else if (tx.type === 'expense') {
-              totalSpent += amt;
-            } else if (tx.type === 'transfer') {
-              totalTransfersOut += amt;
-            } else if (tx.type === 'credit_card_payment') {
-              totalSpent += amt; // paid from bank to card
-            } else if (tx.type === 'refund') {
-              totalRefunds += amt;
-            } else if (tx.type === 'adjustment') {
-              totalIncome += amt; // adjustment can be positive or handled
-            }
-          }
-          // If this account was target of a transfer
-          if (tx.targetAccountId === acc.id && (tx.type === 'transfer' || tx.type === 'adjustment')) {
-            totalTransfersIn += amt;
-          }
-        }
-
-        // Credit / Liability Account Logic
-        if (acc.category === 'credit') {
-          if (tx.accountId === acc.id) {
-            if (tx.type === 'expense' || tx.type === 'purchase') {
-              totalSpent += amt;
-            } else if (tx.type === 'refund') {
-              totalRefunds += amt;
-            }
-          }
-          // If this credit card received a payment or transfer from bank
-          if (tx.targetAccountId === acc.id && (tx.type === 'credit_card_payment' || tx.type === 'transfer')) {
-            totalPaymentsMade += amt;
-          }
-        }
-      });
+      const stats = accMap[acc.id] || {
+        totalIncome: 0, totalSpent: 0, totalTransfersIn: 0, totalTransfersOut: 0, totalPaymentsMade: 0, totalRefunds: 0
+      };
 
       if (acc.category === 'debit') {
         const opening = Number(acc.openingBalance) || 0;
-        accCopy.totalIncome = totalIncome + totalRefunds;
-        accCopy.totalSpent = totalSpent + totalTransfersOut;
-        accCopy.currentBalance = opening + totalIncome + totalTransfersIn + totalRefunds - totalSpent - totalTransfersOut;
+        accCopy.totalIncome = stats.totalIncome + stats.totalRefunds;
+        accCopy.totalSpent = stats.totalSpent + stats.totalTransfersOut;
+        accCopy.currentBalance = opening + stats.totalIncome + stats.totalTransfersIn + stats.totalRefunds - stats.totalSpent - stats.totalTransfersOut;
       } else {
         const opening = Number(acc.openingOutstanding) || 0;
         const limit = Number(acc.creditLimit) || 0;
-        accCopy.totalSpent = totalSpent;
-        accCopy.paymentsMade = totalPaymentsMade;
-        // Outstanding = Opening + Purchases - Payments - Refunds
-        const outstanding = Math.max(0, opening + totalSpent - totalPaymentsMade - totalRefunds);
+        accCopy.totalSpent = stats.totalSpent;
+        accCopy.paymentsMade = stats.totalPaymentsMade;
+        const outstanding = Math.max(0, opening + stats.totalSpent - stats.totalPaymentsMade - stats.totalRefunds);
         accCopy.currentOutstanding = outstanding;
         accCopy.availableCredit = Math.max(0, limit - outstanding);
         accCopy.utilizationRate = limit > 0 ? ((outstanding / limit) * 100).toFixed(1) : 0;
       }
-
       return accCopy;
     });
+
+    this._cachedAccountsWithBalances = calculated;
+    return calculated;
   }
 
   async getAccountById(id) {
@@ -528,10 +544,15 @@ export class StorageEngine {
     return accounts.find(a => a.id === id) || null;
   }
 
-  // Financial Position & Dashboard Metrics
+  // Financial Position & Dashboard Metrics (High-Speed Cached)
   async getDashboardMetrics() {
-    const accounts = await this.getAccountsWithCalculatedBalances();
-    const transactions = await this.getAll(STORES.TRANSACTIONS);
+    if (this._cachedDashboardMetrics) {
+      return this._cachedDashboardMetrics;
+    }
+    const [accounts, transactions] = await Promise.all([
+      this.getAccountsWithCalculatedBalances(),
+      this.getAll(STORES.TRANSACTIONS)
+    ]);
 
     // Sum Assets (Debit Accounts)
     const debitAccounts = accounts.filter(a => a.category === 'debit');
@@ -599,7 +620,7 @@ export class StorageEngine {
       .sort((a, b) => new Date(b.date || b.createdTimestamp) - new Date(a.date || a.createdTimestamp))
       .slice(0, 10);
 
-    return {
+    const metrics = {
       totalAssets,
       totalLiabilities,
       netPosition,
@@ -616,16 +637,45 @@ export class StorageEngine {
       creditAccounts,
       recentTransactions
     };
+
+    this._cachedDashboardMetrics = metrics;
+    return metrics;
   }
 
-  // Comprehensive aggregated financial context for Gemini AI
+  // Concise, token-efficient financial context tailored for fast Gemini AI response
   async getFinancialContextForAI() {
-    const metrics = await this.getDashboardMetrics();
-    const accounts = await this.getAccountsWithCalculatedBalances();
-    const categories = await this.getAll(STORES.CATEGORIES);
-    const recentTx = await this.getFilteredTransactions({});
+    if (this._cachedAiContext) {
+      return this._cachedAiContext;
+    }
+    const [metrics, accounts, categories, transactions] = await Promise.all([
+      this.getDashboardMetrics(),
+      this.getAccountsWithCalculatedBalances(),
+      this.getAll(STORES.CATEGORIES),
+      this.getAll(STORES.TRANSACTIONS)
+    ]);
 
-    return {
+    const accNameMap = new Map(accounts.map(a => [a.id, a.name]));
+
+    // Sift top 10 recent transactions with concise essential fields
+    const recentTx = [...transactions]
+      .sort((a, b) => new Date(b.date || b.createdTimestamp) - new Date(a.date || a.createdTimestamp))
+      .slice(0, 10)
+      .map(t => ({
+        date: t.date,
+        type: t.type,
+        amount: t.amount,
+        category: t.category,
+        accountName: accNameMap.get(t.accountId) || 'Account',
+        description: t.description || ''
+      }));
+
+    // Filter non-zero category spending to keep prompt compact
+    const activeCatSpending = {};
+    for (const [cat, amt] of Object.entries(metrics.categorySpending || {})) {
+      if (amt > 0) activeCatSpending[cat] = amt;
+    }
+
+    const aiContext = {
       netPosition: metrics.netPosition,
       totalAssets: metrics.totalAssets,
       totalLiabilities: metrics.totalLiabilities,
@@ -634,43 +684,22 @@ export class StorageEngine {
       savingsThisMonth: metrics.savingsThisMonth,
       savingsRate: metrics.savingsRate,
       overallCreditUtilization: metrics.overallCreditUtilization,
-      categorySpending: metrics.categorySpending,
-      upcomingDues: metrics.upcomingPayments,
-      accounts: accounts.map(a => {
-        const dueInfo = a.category === 'credit' ? AccountModel.getNextDueDate(a) : null;
-        return {
-          id: a.id,
-          name: a.name,
-          category: a.category,
-          type: a.type,
-          balance: a.category === 'debit' ? a.currentBalance : undefined,
-          outstanding: a.category === 'credit' ? a.currentOutstanding : undefined,
-          limit: a.category === 'credit' ? a.creditLimit : undefined,
-          utilizationRate: a.category === 'credit' ? a.utilizationRate : undefined,
-          dueDay: dueInfo ? dueInfo.dueDay : undefined,
-          nextDueDate: dueInfo ? dueInfo.dateString : undefined,
-          daysUntilDue: dueInfo ? dueInfo.daysUntilDue : undefined,
-          isDueSoon: dueInfo ? dueInfo.isDueSoon : undefined
-        };
-      }),
-      categories: categories.map(c => ({
-        name: c.name,
-        type: c.type,
-        icon: c.icon,
-        subcategories: c.subcategories || []
+      categorySpending: activeCatSpending,
+      accounts: accounts.map(a => ({
+        name: a.name,
+        category: a.category,
+        type: a.type,
+        balance: a.category === 'debit' ? a.currentBalance : undefined,
+        outstanding: a.category === 'credit' ? a.currentOutstanding : undefined,
+        limit: a.category === 'credit' ? a.creditLimit : undefined,
+        utilizationRate: a.category === 'credit' ? a.utilizationRate : undefined
       })),
-      recentTransactions: recentTx.slice(0, 35).map(t => ({
-        id: t.id,
-        date: t.date,
-        type: t.type,
-        amount: t.amount,
-        category: t.category,
-        subcategory: t.subcategory,
-        accountName: t.accountName,
-        targetAccountName: t.targetAccountName,
-        description: t.description
-      }))
+      categories: categories.map(c => c.name),
+      recentTransactions: recentTx
     };
+
+    this._cachedAiContext = aiContext;
+    return aiContext;
   }
 
   // Transactions with filtering

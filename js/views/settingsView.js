@@ -102,34 +102,27 @@ export class SettingsView {
         </div>
 
         <!-- 3. Appearance & Theme (Dark Mode / Light Mode) -->
-        <div class="card" style="margin-bottom: 1.5rem;">
-          <div class="card-header">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span class="text-lg">🎨</span>
-              <h4>Appearance & Theme</h4>
+        <div class="card theme-compact-card" style="margin-bottom: 1.5rem;">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 1.3rem;">🎨</span>
+              <div>
+                <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700;">Appearance</h4>
+                <div class="text-xs text-muted" id="theme-active-status" style="margin-top: 2px;">
+                  ${localStorage.getItem('tm_theme') === 'light' ? '☀️ Light Mode Active' : (localStorage.getItem('tm_theme') === 'system' ? '⚙️ System Auto' : '🌙 Dark Mode Active')}
+                </div>
+              </div>
             </div>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span class="badge badge-primary" id="badge-theme-mode">${localStorage.getItem('tm_theme') === 'light' ? '☀️ Light Mode' : '🌙 Dark Mode'}</span>
-              <button type="button" class="btn btn-outline btn-xs" id="btn-quick-theme-toggle" title="Quick toggle between Light and Dark mode">
-                ${localStorage.getItem('tm_theme') === 'light' ? '🌙 Switch to Dark' : '☀️ Switch to Light'}
+            <div class="theme-segmented-control" role="group" aria-label="Visual Theme">
+              <button type="button" class="theme-seg-btn ${(!localStorage.getItem('tm_theme') || localStorage.getItem('tm_theme') === 'dark') ? 'active' : ''}" data-theme="dark">
+                <span>🌙 Dark</span>
               </button>
-            </div>
-          </div>
-          <p class="text-sm text-muted">Choose your preferred visual theme. Select Dark Mode for deep OLED blacks or Light Mode for clean high-contrast daytime readability.</p>
-          <div style="margin-top: 1rem;">
-            <div class="radio-toggle-group" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px;">
-              <label class="radio-pill" style="padding: 12px 14px; cursor: pointer; text-align: center;">
-                <input type="radio" name="app_theme_opt" value="dark" ${(!localStorage.getItem('tm_theme') || localStorage.getItem('tm_theme') === 'dark') ? 'checked' : ''}>
-                <span style="font-weight: 600;">🌙 Dark Mode</span>
-              </label>
-              <label class="radio-pill" style="padding: 12px 14px; cursor: pointer; text-align: center;">
-                <input type="radio" name="app_theme_opt" value="light" ${localStorage.getItem('tm_theme') === 'light' ? 'checked' : ''}>
-                <span style="font-weight: 600;">☀️ Light Mode</span>
-              </label>
-              <label class="radio-pill" style="padding: 12px 14px; cursor: pointer; text-align: center;">
-                <input type="radio" name="app_theme_opt" value="system" ${localStorage.getItem('tm_theme') === 'system' ? 'checked' : ''}>
-                <span style="font-weight: 600;">⚙️ System Auto</span>
-              </label>
+              <button type="button" class="theme-seg-btn ${localStorage.getItem('tm_theme') === 'light' ? 'active' : ''}" data-theme="light">
+                <span>☀️ Light</span>
+              </button>
+              <button type="button" class="theme-seg-btn ${localStorage.getItem('tm_theme') === 'system' ? 'active' : ''}" data-theme="system">
+                <span>⚙️ Auto</span>
+              </button>
             </div>
           </div>
         </div>
@@ -401,32 +394,19 @@ export class SettingsView {
       }
     });
 
-    // Quick Theme Toggle Button in Settings
-    container.querySelector('#btn-quick-theme-toggle')?.addEventListener('click', () => {
-      const current = document.documentElement.getAttribute('data-theme') || 'dark';
-      const nextTheme = current === 'dark' ? 'light' : 'dark';
-      this.app.applyTheme(nextTheme, true);
-      const radio = container.querySelector(`input[name="app_theme_opt"][value="${nextTheme}"]`);
-      if (radio) radio.checked = true;
-      const badge = container.querySelector('#badge-theme-mode');
-      if (badge) badge.textContent = nextTheme === 'light' ? '☀️ Light Mode' : '🌙 Dark Mode';
-      const btn = container.querySelector('#btn-quick-theme-toggle');
-      if (btn) btn.textContent = nextTheme === 'light' ? '🌙 Switch to Dark' : '☀️ Switch to Light';
-    });
-
-    // Theme Mode Change Handlers
-    container.querySelectorAll('input[name="app_theme_opt"]').forEach(radio => {
-      radio.addEventListener('change', (e) => {
-        const theme = e.target.value;
+    // Theme Segmented Control
+    const themeButtons = container.querySelectorAll('.theme-seg-btn');
+    const themeStatus = container.querySelector('#theme-active-status');
+    themeButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const theme = btn.getAttribute('data-theme');
         this.app.applyTheme(theme, true);
-        const resolved = document.documentElement.getAttribute('data-theme') || theme;
-        const badge = container.querySelector('#badge-theme-mode');
-        if (badge) {
-          badge.textContent = resolved === 'light' ? '☀️ Light Mode' : '🌙 Dark Mode';
-        }
-        const btn = container.querySelector('#btn-quick-theme-toggle');
-        if (btn) {
-          btn.textContent = resolved === 'light' ? '🌙 Switch to Dark' : '☀️ Switch to Light';
+        themeButtons.forEach(b => b.classList.toggle('active', b === btn));
+        if (themeStatus) {
+          const resolved = document.documentElement.getAttribute('data-theme') || theme;
+          themeStatus.textContent = theme === 'system' 
+            ? `⚙️ System Auto (${resolved === 'light' ? 'Light' : 'Dark'})`
+            : (resolved === 'light' ? '☀️ Light Mode Active' : '🌙 Dark Mode Active');
         }
       });
     });

@@ -249,10 +249,29 @@ export class AssistantView {
       </div>
     `;
     msgContainer.insertAdjacentHTML('beforeend', userMsgHtml);
+
+    // Instant Visual Feedback: Show thinking indicator
+    const thinkingHtml = `
+      <div class="chat-msg msg-ai fade-in" id="ai-thinking-indicator">
+        <div class="msg-avatar">✨</div>
+        <div class="msg-bubble thinking-bubble">
+          <span class="typing-dot"></span>
+          <span class="typing-dot"></span>
+          <span class="typing-dot"></span>
+        </div>
+      </div>
+    `;
+    msgContainer.insertAdjacentHTML('beforeend', thinkingHtml);
     msgContainer.scrollTop = msgContainer.scrollHeight;
 
     // Process via AssistantCoordinator
-    const response = await this.coordinator.processInput(text);
+    let response = null;
+    try {
+      response = await this.coordinator.processInput(text);
+    } finally {
+      const thinkingEl = document.getElementById('ai-thinking-indicator');
+      if (thinkingEl) thinkingEl.remove();
+    }
     if (!response) return;
 
     if (response.type === 'account_created' && response.data) {

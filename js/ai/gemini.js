@@ -95,7 +95,7 @@ export class GeminiService {
       },
       generationConfig: {
         temperature: 0.3,
-        maxOutputTokens: 1200
+        maxOutputTokens: 600
       }
     };
 
@@ -139,7 +139,7 @@ export class GeminiService {
   }
 
   /**
-   * System Prompt incorporating real financial data & instructions
+   * Compact, High-Speed System Prompt incorporating real financial data
    */
   static buildSystemPrompt(context) {
     const currency = localStorage.getItem('tm_currency') || '₹';
@@ -153,42 +153,37 @@ export class GeminiService {
     const utilRate = context?.overallCreditUtilization ?? 0;
 
     const accountsStr = (context?.accounts || [])
-      .map(a => `- ${a.name} (${a.type}): ${a.category === 'debit' ? `Balance ${currency}${a.balance}` : `Outstanding ${currency}${a.outstanding} (Limit ${currency}${a.limit}, ${a.utilizationRate}% util)`}`)
+      .map(a => `- ${a.name} (${a.type}): ${a.category === 'debit' ? `Bal ${currency}${a.balance}` : `Debt ${currency}${a.outstanding} (Limit ${currency}${a.limit}, ${a.utilizationRate}% util)`}`)
       .join('\n');
 
     const catSpendingStr = Object.entries(context?.categorySpending || {})
       .map(([cat, amt]) => `- ${cat}: ${currency}${amt}`)
       .join('\n') || 'None recorded yet';
 
-    const recentTxStr = (context?.recentTransactions || []).slice(0, 25)
-      .map(t => `- [${t.date}] ${t.type.toUpperCase()}: ${currency}${t.amount} (${t.category}${t.subcategory ? ' / ' + t.subcategory : ''}) on "${t.accountName}" - "${t.description || 'No description'}"`)
+    const recentTxStr = (context?.recentTransactions || []).slice(0, 10)
+      .map(t => `- [${t.date}] ${t.type.toUpperCase()}: ${currency}${t.amount} (${t.category}) on "${t.accountName}"${t.description ? ' - ' + t.description : ''}`)
       .join('\n') || 'No recent transactions';
 
-    const categoriesList = (context?.categories || []).map(c => c.name).join(', ');
+    const categoriesList = (context?.categories || []).map(c => typeof c === 'string' ? c : c.name).join(', ');
 
-    return `You are Track-Money AI Co-Pilot, the user's personal financial advisor and intelligent in-app agent.
-You have direct, real-time read access to all the user's financial data, and write access via structured actions.
+    return `You are Track-Money AI Co-Pilot, the user's personal financial advisor and in-app agent.
+You have direct read access to live financial metrics, and write access via structured actions.
 
-### USER'S LIVE FINANCIAL STATE:
-- Currency: ${currency}
-- Net Position (Net Worth): ${currency}${netPos.toLocaleString('en-IN')}
-- Total Liquid Assets: ${currency}${totalAssets.toLocaleString('en-IN')}
-- Total Liabilities (Credit Debt): ${currency}${totalLiabilities.toLocaleString('en-IN')}
-- Overall Credit Utilization: ${utilRate}%
-- This Month's Income: ${currency}${income.toLocaleString('en-IN')}
-- This Month's Expenses: ${currency}${expense.toLocaleString('en-IN')}
-- Net Savings This Month: ${currency}${savings.toLocaleString('en-IN')} (${savingsRate}% savings rate)
+### LIVE FINANCIAL STATE:
+- Net Worth: ${currency}${netPos.toLocaleString('en-IN')}
+- Assets: ${currency}${totalAssets.toLocaleString('en-IN')} | Debt: ${currency}${totalLiabilities.toLocaleString('en-IN')} (Util: ${utilRate}%)
+- Month Income: ${currency}${income.toLocaleString('en-IN')} | Expenses: ${currency}${expense.toLocaleString('en-IN')} | Savings: ${currency}${savings.toLocaleString('en-IN')} (${savingsRate}%)
 
 ### ACCOUNTS:
 ${accountsStr || 'No accounts created yet'}
 
-### THIS MONTH'S SPENDING BY CATEGORY:
+### THIS MONTH SPENDING:
 ${catSpendingStr}
 
-### EXISTING CATEGORIES:
+### CATEGORIES:
 ${categoriesList}
 
-### RECENT TRANSACTIONS (Latest 25):
+### RECENT TRANSACTIONS (Top 10):
 ${recentTxStr}
 
 ### YOUR ROLE & INSTRUCTIONS:

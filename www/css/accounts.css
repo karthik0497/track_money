@@ -89,6 +89,7 @@
   font-size: 1.05rem;
   font-weight: 800;
   line-height: 1.2;
+  white-space: nowrap;
 }
 
 .acc-sub-val {
@@ -110,13 +111,36 @@
 }
 
 .summary-chip {
-  background: var(--bg-surface);
+  background: var(--bg-surface-elevated);
   border: 1px solid var(--border-color);
+  padding: 10px 14px;
   border-radius: var(--radius-sm);
-  padding: 8px 10px;
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
+
+.chip-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chip-val {
+  font-family: var(--font-heading);
+  font-size: clamp(0.82rem, 3.2vw, 1.15rem);
+  font-weight: 700;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+
+@media (max-width: 600px) {
+  .summary-chip {
+    padding: 8px 10px;
+  }
   .card-quick-actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -204,27 +228,6 @@
   .detail-actions-bar {
     grid-template-columns: 1fr;
   }
-}
-
-.summary-chip {
-  background: var(--bg-surface-elevated);
-  border: 1px solid var(--border-color);
-  padding: 10px 14px;
-  border-radius: var(--radius-sm);
-  display: flex;
-  flex-direction: column;
-}
-
-.chip-label {
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  margin-bottom: 2px;
-}
-
-.chip-val {
-  font-family: var(--font-heading);
-  font-size: 1.15rem;
-  font-weight: 700;
 }
 
 .accounts-card-grid {
