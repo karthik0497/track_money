@@ -135,7 +135,8 @@ export class AccountModel {
 
   static formatCurrency(amount, currency = null) {
     const num = Number(amount) || 0;
-    const activeCurrency = currency || localStorage.getItem('tm_currency') || '₹';
+    const storedCurrency = typeof localStorage !== 'undefined' ? localStorage.getItem('tm_currency') : null;
+    const activeCurrency = currency || storedCurrency || '₹';
     // Format according to standard currency locale
     const locale = activeCurrency === '₹' ? 'en-IN' : 'en-US';
     return activeCurrency + '\u00A0' + num.toLocaleString(locale, {

@@ -140,7 +140,8 @@ export class RecurringView {
           rec.nextDueDate = currentDue.toISOString().split('T')[0];
           await this.storage.put('recurring_transactions', rec);
 
-          this.render(container);
+          await this.render(container);
+          this.app.updateHeaderSummary();
           this.app.showToast(`Logged transaction for "${rec.title}"! Balances updated.`);
         }
       });

@@ -31,9 +31,24 @@ export const PAYMENT_METHODS = [
 ];
 
 export class TransactionModel {
-  static formatAmount(amount, type, currency = '₹') {
+  static parseLocalDate(dateValue) {
+    if (!dateValue) return new Date(NaN);
+    if (dateValue instanceof Date) return new Date(dateValue.getTime());
+    if (typeof dateValue === 'string') {
+      const m = dateValue.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (m) {
+        return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+      }
+    }
+    return new Date(dateValue);
+  }
+
+  static formatAmount(amount, type, currency = null) {
     const num = Number(amount) || 0;
-    const formatted = currency + '\u00A0' + num.toLocaleString('en-IN', {
+    const storedCurrency = typeof localStorage !== 'undefined' ? localStorage.getItem('tm_currency') : null;
+    const activeCurrency = currency || storedCurrency || '₹';
+    const locale = activeCurrency === '₹' ? 'en-IN' : 'en-US';
+    const formatted = activeCurrency + '\u00A0' + num.toLocaleString(locale, {
       maximumFractionDigits: 2,
       minimumFractionDigits: 0
     });
@@ -51,7 +66,7 @@ export class TransactionModel {
 
   static formatDate(dateString) {
     if (!dateString) return '';
-    const date = new Date(dateString);
+    const date = this.parseLocalDate(dateString);
     if (isNaN(date.getTime())) return dateString;
     return date.toLocaleDateString('en-IN', {
       day: 'numeric',

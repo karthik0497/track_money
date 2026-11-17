@@ -1,5 +1,5 @@
 // Track-Money Service Worker for 100% Offline Capability & Hybrid App PWA
-const CACHE_NAME = 'track-money-v5';
+const CACHE_NAME = 'track-money-v6';
 
 const ASSETS = [
   './',
@@ -14,10 +14,13 @@ const ASSETS = [
   './css/assistant.css',
   './css/accounts.css',
   './js/app.js',
+  './js/config.js',
   './js/db/schema.js',
   './js/db/storage.js',
   './js/models/account.js',
   './js/models/transaction.js',
+  './js/ai/insights.js',
+  './js/ai/gemini.js',
   './js/ai/nlu.js',
   './js/ai/speech.js',
   './js/ai/queries.js',

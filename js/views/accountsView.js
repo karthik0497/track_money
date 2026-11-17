@@ -363,7 +363,8 @@ export class AccountsView {
       if (confirm(`Are you sure you want to delete "${acc.name}"? This account will be removed.`)) {
         await this.storage.delete('accounts', acc.id);
         modalRoot.innerHTML = '';
-        this.render(document.getElementById('app-main-view'));
+        await this.render(document.getElementById('app-main-view'));
+        this.app.updateHeaderSummary();
       }
     });
   }

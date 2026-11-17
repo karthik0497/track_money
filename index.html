@@ -13,16 +13,16 @@
   <meta name="apple-mobile-web-app-title" content="Track-Money">
 
   <!-- Manifest & Icons -->
-  <link rel="manifest" href="manifest.json?v=5">
-  <link rel="icon" type="image/svg+xml" href="icons/icon.svg?v=5">
-  <link rel="apple-touch-icon" href="icons/icon-192.png?v=5">
+  <link rel="manifest" href="manifest.json?v=6">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg?v=6">
+  <link rel="apple-touch-icon" href="icons/icon-192.png?v=6">
 
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="css/index.css?v=5">
-  <link rel="stylesheet" href="css/components.css?v=5">
-  <link rel="stylesheet" href="css/dashboard.css?v=5">
-  <link rel="stylesheet" href="css/assistant.css?v=5">
-  <link rel="stylesheet" href="css/accounts.css?v=5">
+  <link rel="stylesheet" href="css/index.css?v=6">
+  <link rel="stylesheet" href="css/components.css?v=6">
+  <link rel="stylesheet" href="css/dashboard.css?v=6">
+  <link rel="stylesheet" href="css/assistant.css?v=6">
+  <link rel="stylesheet" href="css/accounts.css?v=6">
   <script>
     (function() {
       const savedTheme = localStorage.getItem('tm_theme') || 'dark';
@@ -34,22 +34,22 @@
 </head>
 <body>
   <div id="app-root">
-    <!-- Top Application Bar -->
+    <!-- Top Application Bar (Single AI Button) -->
     <header class="app-header">
       <div class="brand-wrapper">
         <div class="brand-icon-wrapper">
-          <img src="icons/icon.svg?v=5" alt="Track-Money Logo">
+          <img src="icons/icon.svg?v=6" alt="Track-Money Logo">
         </div>
         <h1 class="brand-title">Track-Money</h1>
       </div>
       <div class="header-right">
-        <button class="btn-install-header" id="header-install-btn" title="Install as Hybrid App" style="display: none;">
-          📲 <span class="hide-on-mobile">Install App</span>
+        <button class="btn-install-header" id="header-install-btn" title="Install App" style="display: none;">
+          📲 <span class="hide-on-mobile">Install</span>
         </button>
-        <button class="btn btn-icon" id="header-voice-btn" title="Voice AI Assistant">
+        <button class="btn btn-icon" id="header-voice-btn" title="AI Assistant" aria-label="AI Assistant">
           ✨
         </button>
-        <button class="btn btn-icon" id="header-settings-btn" title="Settings & Tools">
+        <button class="btn btn-icon" id="header-settings-btn" title="Settings" aria-label="Settings">
           ⚙️
         </button>
       </div>
@@ -60,7 +60,7 @@
       <!-- Dynamically injected views -->
     </main>
 
-    <!-- Bottom Navigation Bar: Consolidated 3-Tab High-Efficiency Layout -->
+    <!-- Bottom Navigation Bar -->
     <nav class="bottom-nav" role="navigation" aria-label="Main Navigation">
       <button class="nav-item active" data-view="dashboard" id="nav-dashboard">
         <span class="nav-icon">📊</span>
@@ -70,9 +70,13 @@
         <span class="nav-icon">🏦</span>
         <span class="nav-label">Accounts</span>
       </button>
-      <button class="nav-item btn-ai-sparkle-nav" data-view="assistant" id="nav-assistant">
-        <span class="nav-icon">✨</span>
-        <span class="nav-label">AI Co-Pilot</span>
+      <button class="nav-item" data-view="transactions" id="nav-transactions">
+        <span class="nav-icon">📜</span>
+        <span class="nav-label">History</span>
+      </button>
+      <button class="nav-item" data-view="reports" id="nav-reports">
+        <span class="nav-icon">📈</span>
+        <span class="nav-label">Reports</span>
       </button>
     </nav>
 
@@ -81,8 +85,7 @@
       <div class="more-sheet-card slide-up" id="more-sheet-card">
         <div class="more-sheet-header">
           <div class="flex-align-center" style="gap: 8px;">
-            <span class="text-lg">✨</span>
-            <h4 class="font-bold">More Features & Actions</h4>
+            <h4 class="font-bold">More</h4>
           </div>
           <button class="btn btn-icon btn-sm" id="close-more-sheet">✕</button>
         </div>
@@ -92,7 +95,6 @@
             <div class="more-icon-box" style="background: rgba(99, 102, 241, 0.15); color: #818cf8;">🏷️</div>
             <div class="more-text-col">
               <span class="more-title">Categories</span>
-              <span class="more-desc">Budgets & custom tags</span>
             </div>
             <span class="more-arrow">➔</span>
           </button>
@@ -101,7 +103,6 @@
             <div class="more-icon-box" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">🔄</div>
             <div class="more-text-col">
               <span class="more-title">Recurring</span>
-              <span class="more-desc">Bills, subscriptions, SIPs</span>
             </div>
             <span class="more-arrow">➔</span>
           </button>
@@ -109,17 +110,7 @@
           <button class="more-menu-item" data-view="settings" id="nav-settings">
             <div class="more-icon-box" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24;">⚙️</div>
             <div class="more-text-col">
-              <span class="more-title">Settings & PIN</span>
-              <span class="more-desc">Permissions, lock, backups</span>
-            </div>
-            <span class="more-arrow">➔</span>
-          </button>
-
-          <button class="more-menu-item" id="nav-voice-assistant">
-            <div class="more-icon-box" style="background: rgba(139, 92, 246, 0.15); color: #a78bfa;">🎙️</div>
-            <div class="more-text-col">
-              <span class="more-title">AI Voice Assistant</span>
-              <span class="more-desc">Speak or type transactions</span>
+              <span class="more-title">Settings</span>
             </div>
             <span class="more-arrow">➔</span>
           </button>
@@ -127,8 +118,7 @@
           <button class="more-menu-item" id="nav-install-app">
             <div class="more-icon-box" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">📲</div>
             <div class="more-text-col">
-              <span class="more-title">Install Hybrid App</span>
-              <span class="more-desc">Add directly to your home screen</span>
+              <span class="more-title">Install</span>
             </div>
             <span class="more-arrow">➔</span>
           </button>
@@ -136,7 +126,7 @@
       </div>
     </div>
 
-    <!-- Floating AI Assistant & Drawer Container -->
+    <!-- AI Assistant Drawer Container -->
     <div id="ai-assistant-container"></div>
   </div>
 

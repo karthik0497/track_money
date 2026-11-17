@@ -235,19 +235,36 @@ export class NLUEngine {
   }
 
   static isQueryIntent(text) {
-    const questionWords = ['how much', 'what is', 'what was', 'show me', 'list my', 'tell me', 'can you show', 'my balance', 'biggest expense', 'how many', 'total spent', 'total income'];
+    const questionWords = [
+      'how much', 'what is', 'what was', 'what are', 'where did', 'show me', 'show all',
+      'list my', 'list all', 'say all', 'tell me', 'can you show', 'my balance', 'all balances',
+      'biggest expense', 'highest expense', 'largest expense', 'top expense', 'top spending',
+      'how many', 'total spent', 'total income', 'net worth', 'net position', 'total assets',
+      'credit utilization', 'available credit', 'credit left', 'credit card debt', 'outstanding',
+      'analyze', 'analysis', 'insight', 'insights', 'summary', 'overview', 'report',
+      'financial health', 'suggest', 'suggestion', 'recommend', 'recommendation', 'advice',
+      'improve', 'save more', 'how can i save', 'saving tip', 'savings tip', 'savings opportunity',
+      'unusual', 'anomaly', 'anomalies', 'spike', 'spikes', 'outlier', 'duplicate',
+      'trend', 'trends', 'pattern', 'patterns', 'compare', 'comparison', 'burn rate',
+      'recent transactions', 'all transactions', 'my transactions', 'transactions above',
+      'expense breakdown', 'spending breakdown', 'income analysis', 'my income'
+    ];
     return questionWords.some(q => text.includes(q)) || text.endsWith('?');
   }
 
   static detectTransfer(text, accounts) {
     // "Transfer 10,000 from HDFC Bank to SBI Savings"
-    // "Move 5000 from SBI to HDFC"
-    const transferRegex = /(?:transfer|move|send)\s+(?:₹|rs\.?|inr)?\s*([\d,]+(?:\.\d+)?)\s*(?:k|lakh)?\s+from\s+(.+?)\s+to\s+(.+?)(?:$|\.|\s+today|\s+yesterday)/i;
+    // "Move 5k from ICICI to IOB"
+    const transferRegex = /(?:transfer|move|send)\s+(?:₹|rs\.?|inr)?\s*([\d,]+(?:\.\d+)?)\s*(k|lakh|lac|lacs)?\s+from\s+(.+?)\s+to\s+(.+?)(?:$|\.|\s+today|\s+yesterday)/i;
     const match = text.match(transferRegex);
     if (match) {
-      const amount = this.parseAmountString(match[1]);
-      const fromStr = match[2].trim();
-      const toStr = match[3].trim();
+      let amount = this.parseAmountString(match[1]);
+      const unit = (match[2] || '').toLowerCase();
+      if (unit === 'k') amount *= 1000;
+      else if (unit.startsWith('lac') || unit === 'lakh') amount *= 100000;
+
+      const fromStr = match[3].trim();
+      const toStr = match[4].trim();
 
       const fromAcc = this.fuzzyFindAccount(fromStr, accounts);
       const toAcc = this.fuzzyFindAccount(toStr, accounts);
@@ -479,14 +496,14 @@ export class NLUEngine {
 
   static extractDate(text) {
     const today = new Date();
-    if (text.includes('yesterday')) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - 1);
-      return d.toISOString().split('T')[0];
-    }
     if (text.includes('day before yesterday')) {
       const d = new Date(today);
       d.setDate(d.getDate() - 2);
+      return d.toISOString().split('T')[0];
+    }
+    if (text.includes('yesterday')) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - 1);
       return d.toISOString().split('T')[0];
     }
     // Check explicit month names: "22 sep", "15 august", etc.

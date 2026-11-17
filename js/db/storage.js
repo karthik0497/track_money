@@ -1,21 +1,38 @@
 // Track-Money: IndexedDB Local Relational Storage Engine
 import { DB_NAME, DB_VERSION, STORES, DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES, DEFAULT_TRANSACTIONS, DEFAULT_RECURRING } from './schema.js';
 import { AccountModel } from '../models/account.js';
+import { TransactionModel } from '../models/transaction.js';
+import { FinancialInsightsEngine } from '../ai/insights.js';
+
+const round2 = (n) => {
+  const v = Math.round(((Number(n) || 0) + Number.EPSILON) * 100) / 100;
+  return Object.is(v, -0) ? 0 : v;
+};
+
+const lsGet = (key) => (typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null);
+const lsSet = (key, val) => { if (typeof localStorage !== 'undefined') localStorage.setItem(key, val); };
+const lsRemove = (key) => { if (typeof localStorage !== 'undefined') localStorage.removeItem(key); };
 
 export class StorageEngine {
   constructor() {
     this.db = null;
     this.isReady = false;
+    this._dataVersion = 0;
     this._cachedAccountsWithBalances = null;
     this._cachedDashboardMetrics = null;
+    this._cachedDashboardMonthKey = null;
     this._cachedAiContext = null;
+    this._cachedFinancialInsights = null;
     this.readyPromise = this.init();
   }
 
   _invalidateCache() {
+    this._dataVersion++;
     this._cachedAccountsWithBalances = null;
     this._cachedDashboardMetrics = null;
+    this._cachedDashboardMonthKey = null;
     this._cachedAiContext = null;
+    this._cachedFinancialInsights = null;
   }
 
   async init() {
@@ -93,13 +110,13 @@ export class StorageEngine {
   }
 
   async seedInitialDataIfEmpty() {
-    // 1. One-time purge of previously seeded dummy demo accounts/transactions if not already done
-    const isCleaned = typeof localStorage !== 'undefined' ? localStorage.getItem('tm_demo_cleaned_v2') : null;
-    if (!isCleaned) {
-      const DEMO_ACCOUNT_IDS = ['acc_hdfc_bank', 'acc_sbi_savings', 'acc_demat', 'acc_cash', 'acc_hdfc_cc', 'acc_amazon_pay'];
-      const DEMO_TX_IDS = ['tx_001', 'tx_002', 'tx_003', 'tx_004', 'tx_005', 'tx_006', 'tx_007', 'tx_008', 'tx_009', 'tx_010'];
-      const DEMO_REC_IDS = ['rec_salary', 'rec_rent', 'rec_netflix', 'rec_sip'];
+    const DEMO_ACCOUNT_IDS = ['acc_hdfc_bank', 'acc_sbi_savings', 'acc_demat', 'acc_cash', 'acc_hdfc_cc', 'acc_amazon_pay'];
+    const DEMO_TX_IDS = ['tx_001', 'tx_002', 'tx_003', 'tx_004', 'tx_005', 'tx_006', 'tx_007', 'tx_008', 'tx_009', 'tx_010'];
+    const DEMO_REC_IDS = ['rec_salary', 'rec_rent', 'rec_netflix', 'rec_sip'];
 
+    // 1. One-time purge of previously seeded dummy demo accounts/transactions if not already done
+    const isCleaned = lsGet('tm_demo_cleaned_v2');
+    if (!isCleaned) {
       for (const accId of DEMO_ACCOUNT_IDS) {
         const acc = await this.get(STORES.ACCOUNTS, accId);
         if (acc) await this.delete(STORES.ACCOUNTS, accId);
@@ -113,34 +130,32 @@ export class StorageEngine {
         if (rec) await this.delete(STORES.RECURRING, recId);
       }
 
-      if (typeof localStorage !== 'undefined') {
-        const rawSnapshot = localStorage.getItem('tm_backup_snapshot');
-        if (rawSnapshot) {
-          try {
-            const snapshot = JSON.parse(rawSnapshot);
-            if (snapshot.accounts) {
-              snapshot.accounts = snapshot.accounts.filter(a => !DEMO_ACCOUNT_IDS.includes(a.id));
-            }
-            if (snapshot.transactions) {
-              snapshot.transactions = snapshot.transactions.filter(t => !DEMO_TX_IDS.includes(t.id));
-            }
-            if (snapshot.recurring) {
-              snapshot.recurring = snapshot.recurring.filter(r => !DEMO_REC_IDS.includes(r.id));
-            }
-            localStorage.setItem('tm_backup_snapshot', JSON.stringify(snapshot));
-          } catch (e) {
-            localStorage.removeItem('tm_backup_snapshot');
+      const rawSnapshot = lsGet('tm_backup_snapshot');
+      if (rawSnapshot) {
+        try {
+          const snapshot = JSON.parse(rawSnapshot);
+          if (snapshot.accounts) {
+            snapshot.accounts = snapshot.accounts.filter(a => !DEMO_ACCOUNT_IDS.includes(a.id));
           }
+          if (snapshot.transactions) {
+            snapshot.transactions = snapshot.transactions.filter(t => !DEMO_TX_IDS.includes(t.id));
+          }
+          if (snapshot.recurring) {
+            snapshot.recurring = snapshot.recurring.filter(r => !DEMO_REC_IDS.includes(r.id));
+          }
+          lsSet('tm_backup_snapshot', JSON.stringify(snapshot));
+        } catch (e) {
+          lsRemove('tm_backup_snapshot');
         }
-        localStorage.setItem('tm_demo_cleaned_v2', 'true');
       }
+      lsSet('tm_demo_cleaned_v2', 'true');
     }
 
     let existingAccounts = await this.getAll(STORES.ACCOUNTS);
 
     // If IndexedDB accounts are completely empty, check if a valid user backup snapshot exists
     if (existingAccounts.length === 0) {
-      const emergencySnapshot = typeof localStorage !== 'undefined' ? localStorage.getItem('tm_backup_snapshot') : null;
+      const emergencySnapshot = lsGet('tm_backup_snapshot');
       if (emergencySnapshot) {
         try {
           const snapshotData = JSON.parse(emergencySnapshot);
@@ -211,12 +226,12 @@ export class StorageEngine {
 
     const profile = await this.get(STORES.SETTINGS, 'profile');
     if (!profile) {
-      const defaultLoginId = localStorage.getItem('tm_login_id') || 'User';
+      const defaultLoginId = lsGet('tm_login_id') || 'User';
       await this.put(STORES.SETTINGS, {
         key: 'profile',
         loginId: defaultLoginId,
         name: defaultLoginId,
-        currency: localStorage.getItem('tm_currency') || '₹',
+        currency: lsGet('tm_currency') || '₹',
         pinEnabled: false,
         pinCode: null,
         createdDate: new Date().toISOString()
@@ -241,7 +256,7 @@ export class StorageEngine {
           recurring,
           settings
         };
-        localStorage.setItem('tm_backup_snapshot', JSON.stringify(snapshot));
+        lsSet('tm_backup_snapshot', JSON.stringify(snapshot));
       }
     } catch (e) {
       console.warn('Could not save local emergency snapshot:', e);
@@ -254,9 +269,9 @@ export class StorageEngine {
     const profile = await this.get(STORES.SETTINGS, 'profile');
     return profile || {
       key: 'profile',
-      loginId: localStorage.getItem('tm_login_id') || 'User',
-      name: localStorage.getItem('tm_login_id') || 'User',
-      currency: localStorage.getItem('tm_currency') || '₹',
+      loginId: lsGet('tm_login_id') || 'User',
+      name: lsGet('tm_login_id') || 'User',
+      currency: lsGet('tm_currency') || '₹',
       pinEnabled: false,
       pinCode: null,
       createdDate: new Date().toISOString()
@@ -273,10 +288,10 @@ export class StorageEngine {
       updatedDate: new Date().toISOString()
     };
     if (updated.currency) {
-      localStorage.setItem('tm_currency', updated.currency);
+      lsSet('tm_currency', updated.currency);
     }
     if (updated.loginId) {
-      localStorage.setItem('tm_login_id', updated.loginId);
+      lsSet('tm_login_id', updated.loginId);
     }
     await this.put(STORES.SETTINGS, updated);
     return updated;
@@ -310,16 +325,25 @@ export class StorageEngine {
     });
   }
 
-  async put(storeName, value) {
+  async _putRaw(storeName, value) {
     if (!this.db) await this.readyPromise;
-    const res = await new Promise((resolve, reject) => {
+    return new Promise((resolve, reject) => {
       const tx = this.db.transaction(storeName, 'readwrite');
       const store = tx.objectStore(storeName);
       const req = store.put(value);
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
     });
-    if (storeName === STORES.ACCOUNTS || storeName === STORES.TRANSACTIONS || storeName === STORES.CATEGORIES) {
+  }
+
+  async put(storeName, value) {
+    const res = await this._putRaw(storeName, value);
+    if (
+      storeName === STORES.ACCOUNTS ||
+      storeName === STORES.TRANSACTIONS ||
+      storeName === STORES.CATEGORIES ||
+      storeName === STORES.RECURRING
+    ) {
       this._invalidateCache();
     }
     this.scheduleEmergencySnapshot();
@@ -335,8 +359,16 @@ export class StorageEngine {
       req.onsuccess = () => resolve(true);
       req.onerror = () => reject(req.error);
     });
-    if (storeName === STORES.ACCOUNTS || storeName === STORES.TRANSACTIONS || storeName === STORES.CATEGORIES) {
+    if (
+      storeName === STORES.ACCOUNTS ||
+      storeName === STORES.TRANSACTIONS ||
+      storeName === STORES.CATEGORIES ||
+      storeName === STORES.RECURRING
+    ) {
       this._invalidateCache();
+    }
+    if (storeName === STORES.TRANSACTIONS) {
+      await this._syncStoredBalances();
     }
     this.scheduleEmergencySnapshot();
     return res;
@@ -368,9 +400,7 @@ export class StorageEngine {
     await this.clear(STORES.ACCOUNTS);
     await this.clear(STORES.TRANSACTIONS);
     await this.clear(STORES.RECURRING);
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem('tm_backup_snapshot');
-    }
+    lsRemove('tm_backup_snapshot');
     return true;
   }
 
@@ -400,70 +430,122 @@ export class StorageEngine {
 
     if (!isCredit) {
       if (updateData.openingBalance !== undefined) {
-        updated.openingBalance = Number(updateData.openingBalance) || 0;
+        updated.openingBalance = round2(Number(updateData.openingBalance) || 0);
       }
       updated.creditLimit = 0;
       updated.openingOutstanding = 0;
     } else {
       if (updateData.creditLimit !== undefined) {
-        updated.creditLimit = Number(updateData.creditLimit) || 0;
+        updated.creditLimit = round2(Number(updateData.creditLimit) || 0);
       }
       if (updateData.openingOutstanding !== undefined) {
-        updated.openingOutstanding = Number(updateData.openingOutstanding) || 0;
+        updated.openingOutstanding = round2(Number(updateData.openingOutstanding) || 0);
       }
       if (updateData.billingCycle !== undefined) {
         updated.billingCycle = updateData.billingCycle;
       }
+      if (updateData.dueDay !== undefined) {
+        updated.dueDay = parseInt(updateData.dueDay, 10) || AccountModel.parseDueDay(updateData);
+      }
       if (updateData.dueDate !== undefined) {
         updated.dueDate = updateData.dueDate;
+        if (updateData.dueDay === undefined) {
+          updated.dueDay = AccountModel.parseDueDay({ dueDate: updateData.dueDate });
+        }
       }
       if (updateData.interestRate !== undefined) {
         updated.interestRate = Number(updateData.interestRate) || 0;
       }
-      updated.availableCredit = Math.max(0, (updated.creditLimit || 0) - (updated.openingOutstanding || 0));
+      updated.availableCredit = Math.max(0, round2((updated.creditLimit || 0) - (updated.openingOutstanding || 0)));
     }
 
     await this.put(STORES.ACCOUNTS, updated);
+    await this._syncStoredBalances();
     await this.saveLocalEmergencySnapshot();
-    return updated;
+    return (await this.getAccountById(id)) || updated;
   }
 
   // Factory Reset All Data (Completely clear all data and re-seed clean default categories)
   async resetAllData() {
     if (!this.db) await this.readyPromise;
+    if (this._snapshotTimer) {
+      clearTimeout(this._snapshotTimer);
+      this._snapshotTimer = null;
+    }
     for (const storeName of Object.values(STORES)) {
       await this.clear(storeName);
     }
 
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem('tm_backup_snapshot');
-      localStorage.setItem('tm_demo_cleaned_v2', 'true');
-    }
+    lsRemove('tm_backup_snapshot');
+    lsSet('tm_demo_cleaned_v2', 'true');
 
     // Re-seed standard default categories
     for (const cat of DEFAULT_CATEGORIES) {
-      await this.put(STORES.CATEGORIES, cat);
+      await this._putRaw(STORES.CATEGORIES, cat);
     }
 
     // Re-seed default profile
-    const defaultLoginId = (typeof localStorage !== 'undefined' ? localStorage.getItem('tm_login_id') : null) || 'User';
-    await this.put(STORES.SETTINGS, {
+    const defaultLoginId = lsGet('tm_login_id') || 'User';
+    await this._putRaw(STORES.SETTINGS, {
       key: 'profile',
       loginId: defaultLoginId,
       name: defaultLoginId,
-      currency: (typeof localStorage !== 'undefined' ? localStorage.getItem('tm_currency') : null) || '₹',
+      currency: lsGet('tm_currency') || '₹',
       pinEnabled: false,
       pinCode: null,
       createdDate: new Date().toISOString()
     });
 
+    this._invalidateCache();
     return true;
+  }
+
+  // Synchronize calculated balances onto stored account records without mutating opening balances.
+  // Deterministically derived from openingBalance/openingOutstanding + all transactions (immune to duplicate updates).
+  async _syncStoredBalances() {
+    if (!this.db) await this.readyPromise;
+    this._cachedAccountsWithBalances = null;
+    this._cachedDashboardMetrics = null;
+    this._cachedAiContext = null;
+    this._cachedFinancialInsights = null;
+
+    const calculated = await this.getAccountsWithCalculatedBalances();
+    const rawAccounts = await this.getAll(STORES.ACCOUNTS);
+    const rawMap = new Map(rawAccounts.map(a => [a.id, a]));
+
+    for (const calc of calculated) {
+      const raw = rawMap.get(calc.id);
+      if (!raw) continue;
+      let changed = false;
+      const next = { ...raw };
+      if (calc.category === 'debit') {
+        if (next.currentBalance !== calc.currentBalance) {
+          next.currentBalance = calc.currentBalance;
+          changed = true;
+        }
+      } else {
+        if (
+          next.currentOutstanding !== calc.currentOutstanding ||
+          next.availableCredit !== calc.availableCredit ||
+          next.utilizationRate !== calc.utilizationRate
+        ) {
+          next.currentOutstanding = calc.currentOutstanding;
+          next.availableCredit = calc.availableCredit;
+          next.utilizationRate = calc.utilizationRate;
+          changed = true;
+        }
+      }
+      if (changed) {
+        await this._putRaw(STORES.ACCOUNTS, next);
+      }
+    }
+    return calculated;
   }
 
   // Account Operations & Dynamic Balance Calculations (Optimized O(A+T) Single-Pass)
   async getAccountsWithCalculatedBalances() {
     if (this._cachedAccountsWithBalances) {
-      return this._cachedAccountsWithBalances;
+      return this._cachedAccountsWithBalances.map(a => ({ ...a }));
     }
     if (!this.db) await this.readyPromise;
     const [accounts, transactions] = await Promise.all([
@@ -486,7 +568,8 @@ export class StorageEngine {
     for (const tx of transactions) {
       const amt = Number(tx.amount) || 0;
       const src = accMap[tx.accountId];
-      const tgt = tx.targetAccountId ? accMap[tx.targetAccountId] : null;
+      const hasDistinctTarget = tx.targetAccountId && tx.targetAccountId !== tx.accountId;
+      const tgt = hasDistinctTarget ? accMap[tx.targetAccountId] : null;
 
       if (src) {
         if (tx.type === 'income' || tx.type === 'adjustment') {
@@ -519,24 +602,34 @@ export class StorageEngine {
 
       if (acc.category === 'debit') {
         const opening = Number(acc.openingBalance) || 0;
-        accCopy.totalIncome = stats.totalIncome + stats.totalRefunds;
-        accCopy.totalSpent = stats.totalSpent + stats.totalTransfersOut;
-        accCopy.currentBalance = opening + stats.totalIncome + stats.totalTransfersIn + stats.totalRefunds - stats.totalSpent - stats.totalTransfersOut;
+        accCopy.totalIncome = round2(stats.totalIncome + stats.totalRefunds);
+        accCopy.totalTransfersIn = round2(stats.totalTransfersIn);
+        accCopy.totalTransfersOut = round2(stats.totalTransfersOut);
+        accCopy.totalSpent = round2(stats.totalSpent + stats.totalTransfersOut);
+        accCopy.currentBalance = round2(
+          opening + stats.totalIncome + stats.totalTransfersIn + stats.totalRefunds - stats.totalSpent - stats.totalTransfersOut
+        );
       } else {
         const opening = Number(acc.openingOutstanding) || 0;
         const limit = Number(acc.creditLimit) || 0;
-        accCopy.totalSpent = stats.totalSpent;
-        accCopy.paymentsMade = stats.totalPaymentsMade;
-        const outstanding = Math.max(0, opening + stats.totalSpent - stats.totalPaymentsMade - stats.totalRefunds);
+        accCopy.totalSpent = round2(stats.totalSpent + stats.totalTransfersOut);
+        accCopy.paymentsMade = round2(stats.totalPaymentsMade + stats.totalTransfersIn);
+        accCopy.totalRefunds = round2(stats.totalRefunds + stats.totalIncome);
+        const outstanding = Math.max(
+          0,
+          round2(
+            opening + stats.totalSpent + stats.totalTransfersOut - stats.totalPaymentsMade - stats.totalTransfersIn - stats.totalRefunds - stats.totalIncome
+          )
+        );
         accCopy.currentOutstanding = outstanding;
-        accCopy.availableCredit = Math.max(0, limit - outstanding);
-        accCopy.utilizationRate = limit > 0 ? ((outstanding / limit) * 100).toFixed(1) : 0;
+        accCopy.availableCredit = Math.max(0, round2(limit - outstanding));
+        accCopy.utilizationRate = limit > 0 ? Number(((outstanding / limit) * 100).toFixed(1)) : 0;
       }
       return accCopy;
     });
 
     this._cachedAccountsWithBalances = calculated;
-    return calculated;
+    return calculated.map(a => ({ ...a }));
   }
 
   async getAccountById(id) {
@@ -545,10 +638,16 @@ export class StorageEngine {
   }
 
   // Financial Position & Dashboard Metrics (High-Speed Cached)
-  async getDashboardMetrics() {
-    if (this._cachedDashboardMetrics) {
+  async getDashboardMetrics(referenceDate = null) {
+    const now = referenceDate ? new Date(referenceDate) : new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    const monthKey = `${currentYear}-${currentMonth}`;
+
+    if (!referenceDate && this._cachedDashboardMetrics && this._cachedDashboardMonthKey === monthKey) {
       return this._cachedDashboardMetrics;
     }
+
     const [accounts, transactions] = await Promise.all([
       this.getAccountsWithCalculatedBalances(),
       this.getAll(STORES.TRANSACTIONS)
@@ -556,50 +655,49 @@ export class StorageEngine {
 
     // Sum Assets (Debit Accounts)
     const debitAccounts = accounts.filter(a => a.category === 'debit');
-    const totalAssets = debitAccounts.reduce((sum, a) => sum + (a.currentBalance || 0), 0);
+    const totalAssets = round2(debitAccounts.reduce((sum, a) => sum + (a.currentBalance || 0), 0));
 
     // Sum Liabilities (Credit Accounts)
     const creditAccounts = accounts.filter(a => a.category === 'credit');
-    const totalLiabilities = creditAccounts.reduce((sum, a) => sum + (a.currentOutstanding || 0), 0);
-    const totalCreditLimit = creditAccounts.reduce((sum, a) => sum + (a.creditLimit || 0), 0);
-    const totalCreditAvailable = creditAccounts.reduce((sum, a) => sum + (a.availableCredit || 0), 0);
-    const overallCreditUtilization = totalCreditLimit > 0 ? ((totalLiabilities / totalCreditLimit) * 100).toFixed(1) : 0;
+    const totalLiabilities = round2(creditAccounts.reduce((sum, a) => sum + (a.currentOutstanding || 0), 0));
+    const totalCreditLimit = round2(creditAccounts.reduce((sum, a) => sum + (a.creditLimit || 0), 0));
+    const totalCreditAvailable = round2(creditAccounts.reduce((sum, a) => sum + (a.availableCredit || 0), 0));
+    const overallCreditUtilization = totalCreditLimit > 0
+      ? Number(((totalLiabilities / totalCreditLimit) * 100).toFixed(1))
+      : 0;
 
-    const netPosition = totalAssets - totalLiabilities;
-
-    // Current month calculations
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth();
+    const netPosition = round2(totalAssets - totalLiabilities);
 
     let thisMonthIncome = 0;
     let thisMonthExpense = 0;
     const categorySpending = {};
 
     transactions.forEach(tx => {
-      const txDate = new Date(tx.date || tx.createdTimestamp);
+      const txDate = TransactionModel.parseLocalDate(tx.date || tx.createdTimestamp);
       const isThisMonth = txDate.getFullYear() === currentYear && txDate.getMonth() === currentMonth;
       const amt = Number(tx.amount) || 0;
 
       if (isThisMonth) {
         if (tx.type === 'income') {
-          thisMonthIncome += amt;
-        } else if (tx.type === 'expense') {
-          thisMonthExpense += amt;
+          thisMonthIncome = round2(thisMonthIncome + amt);
+        } else if (tx.type === 'expense' || tx.type === 'purchase') {
+          thisMonthExpense = round2(thisMonthExpense + amt);
           const cat = tx.category || 'Other Expense';
-          categorySpending[cat] = (categorySpending[cat] || 0) + amt;
+          categorySpending[cat] = round2((categorySpending[cat] || 0) + amt);
         }
       }
     });
 
-    const savingsThisMonth = thisMonthIncome - thisMonthExpense;
-    const savingsRate = thisMonthIncome > 0 ? Math.max(0, ((savingsThisMonth / thisMonthIncome) * 100)).toFixed(1) : 0;
+    const savingsThisMonth = round2(thisMonthIncome - thisMonthExpense);
+    const savingsRate = thisMonthIncome > 0
+      ? Number(((savingsThisMonth / thisMonthIncome) * 100).toFixed(1))
+      : 0;
 
     // Upcoming credit card payments with dynamic recurring monthly due calculation
     const upcomingPayments = creditAccounts
       .filter(a => (a.currentOutstanding || 0) > 0)
       .map(a => {
-        const dueInfo = AccountModel.getNextDueDate(a);
+        const dueInfo = AccountModel.getNextDueDate(a, now);
         return {
           id: a.id,
           accountName: a.name,
@@ -615,9 +713,12 @@ export class StorageEngine {
       })
       .sort((a, b) => a.daysUntilDue - b.daysUntilDue);
 
-    // Sort transactions by date descending
+    // Sort transactions by date descending, then createdTimestamp descending
     const recentTransactions = [...transactions]
-      .sort((a, b) => new Date(b.date || b.createdTimestamp) - new Date(a.date || a.createdTimestamp))
+      .sort((a, b) => {
+        const diff = TransactionModel.parseLocalDate(b.date || b.createdTimestamp) - TransactionModel.parseLocalDate(a.date || a.createdTimestamp);
+        return diff !== 0 ? diff : (b.createdTimestamp || 0) - (a.createdTimestamp || 0);
+      })
       .slice(0, 10);
 
     const metrics = {
@@ -638,34 +739,68 @@ export class StorageEngine {
       recentTransactions
     };
 
-    this._cachedDashboardMetrics = metrics;
+    if (!referenceDate) {
+      this._cachedDashboardMetrics = metrics;
+      this._cachedDashboardMonthKey = monthKey;
+    }
     return metrics;
   }
 
-  // Concise, token-efficient financial context tailored for fast Gemini AI response
+  // Real-Data Financial Insights (Cached until data changes)
+  async getFinancialInsights(referenceDate = null) {
+    if (!referenceDate && this._cachedFinancialInsights) {
+      return this._cachedFinancialInsights;
+    }
+    const [accounts, transactions, recurring, metrics] = await Promise.all([
+      this.getAccountsWithCalculatedBalances(),
+      this.getAll(STORES.TRANSACTIONS),
+      this.getAll(STORES.RECURRING),
+      this.getDashboardMetrics(referenceDate)
+    ]);
+
+    const insights = FinancialInsightsEngine.analyze({
+      accounts,
+      transactions,
+      recurring,
+      metrics,
+      referenceDate: referenceDate || new Date()
+    });
+
+    if (!referenceDate) {
+      this._cachedFinancialInsights = insights;
+    }
+    return insights;
+  }
+
+  // Concise, token-efficient financial context tailored for fast, intelligent Gemini AI responses
   async getFinancialContextForAI() {
     if (this._cachedAiContext) {
       return this._cachedAiContext;
     }
-    const [metrics, accounts, categories, transactions] = await Promise.all([
+    const [metrics, accounts, categories, transactions, insights] = await Promise.all([
       this.getDashboardMetrics(),
       this.getAccountsWithCalculatedBalances(),
       this.getAll(STORES.CATEGORIES),
-      this.getAll(STORES.TRANSACTIONS)
+      this.getAll(STORES.TRANSACTIONS),
+      this.getFinancialInsights()
     ]);
 
     const accNameMap = new Map(accounts.map(a => [a.id, a.name]));
 
-    // Sift top 10 recent transactions with concise essential fields
+    // Top 15 recent transactions with concise essential fields
     const recentTx = [...transactions]
-      .sort((a, b) => new Date(b.date || b.createdTimestamp) - new Date(a.date || a.createdTimestamp))
-      .slice(0, 10)
+      .sort((a, b) => {
+        const diff = TransactionModel.parseLocalDate(b.date || b.createdTimestamp) - TransactionModel.parseLocalDate(a.date || a.createdTimestamp);
+        return diff !== 0 ? diff : (b.createdTimestamp || 0) - (a.createdTimestamp || 0);
+      })
+      .slice(0, 15)
       .map(t => ({
         date: t.date,
         type: t.type,
         amount: t.amount,
         category: t.category,
         accountName: accNameMap.get(t.accountId) || 'Account',
+        targetAccountName: t.targetAccountId ? (accNameMap.get(t.targetAccountId) || undefined) : undefined,
         description: t.description || ''
       }));
 
@@ -676,8 +811,11 @@ export class StorageEngine {
     }
 
     const aiContext = {
+      activePeriod: insights.activePeriod,
       netPosition: metrics.netPosition,
       totalAssets: metrics.totalAssets,
+      liquidAssets: insights.summary.liquidAssets,
+      investedAssets: insights.summary.investedAssets,
       totalLiabilities: metrics.totalLiabilities,
       thisMonthIncome: metrics.thisMonthIncome,
       thisMonthExpense: metrics.thisMonthExpense,
@@ -691,11 +829,32 @@ export class StorageEngine {
         type: a.type,
         balance: a.category === 'debit' ? a.currentBalance : undefined,
         outstanding: a.category === 'credit' ? a.currentOutstanding : undefined,
+        availableCredit: a.category === 'credit' ? a.availableCredit : undefined,
         limit: a.category === 'credit' ? a.creditLimit : undefined,
         utilizationRate: a.category === 'credit' ? a.utilizationRate : undefined
       })),
       categories: categories.map(c => c.name),
-      recentTransactions: recentTx
+      recentTransactions: recentTx,
+      insights: {
+        monthlyHistory: insights.monthlyHistory.slice(-4),
+        trends: {
+          previousPeriod: insights.trends.previousPeriod,
+          expenseChange: insights.trends.expenseChange,
+          expenseChangePct: insights.trends.expenseChangePct,
+          risingCategories: insights.trends.risingCategories.slice(0, 4),
+          missingSalaryDetected: insights.trends.missingSalaryDetected,
+          previousSalaryAmount: insights.trends.previousSalaryAmount
+        },
+        anomalies: {
+          unusualTransactions: insights.anomalies.unusualTransactions.slice(0, 4),
+          categorySpikes: insights.anomalies.categorySpikes.slice(0, 3),
+          potentialDuplicates: insights.anomalies.potentialDuplicates.slice(0, 3)
+        },
+        highUtilizationCards: insights.alerts.highUtilizationCards,
+        liquidityAlerts: insights.alerts.liquidityAlerts,
+        estimatedMonthlySavingsPotential: insights.estimatedMonthlySavingsPotential,
+        recommendations: insights.recommendations.slice(0, 5).map(r => r.detail)
+      }
     };
 
     this._cachedAiContext = aiContext;
@@ -704,9 +863,13 @@ export class StorageEngine {
 
   // Transactions with filtering
   async getFilteredTransactions(filters = {}) {
-    const transactions = await this.getAll(STORES.TRANSACTIONS);
-    const accounts = await this.getAll(STORES.ACCOUNTS);
+    const [transactions, accounts] = await Promise.all([
+      this.getAll(STORES.TRANSACTIONS),
+      this.getAll(STORES.ACCOUNTS)
+    ]);
     const accMap = new Map(accounts.map(a => [a.id, a]));
+    const startDateObj = filters.startDate ? TransactionModel.parseLocalDate(filters.startDate) : null;
+    const endDateObj = filters.endDate ? TransactionModel.parseLocalDate(filters.endDate) : null;
 
     return transactions
       .map(tx => ({
@@ -723,7 +886,8 @@ export class StorageEngine {
           const matchCat = (tx.category || '').toLowerCase().includes(q);
           const matchSubcat = (tx.subcategory || '').toLowerCase().includes(q);
           const matchAcc = (tx.accountName || '').toLowerCase().includes(q);
-          if (!matchDesc && !matchNotes && !matchCat && !matchSubcat && !matchAcc) {
+          const matchTargetAcc = (tx.targetAccountName || '').toLowerCase().includes(q);
+          if (!matchDesc && !matchNotes && !matchCat && !matchSubcat && !matchAcc && !matchTargetAcc) {
             return false;
           }
         }
@@ -749,16 +913,14 @@ export class StorageEngine {
           }
         }
 
-        // Date range filter
-        if (filters.startDate) {
-          if (new Date(tx.date) < new Date(filters.startDate)) {
-            return false;
-          }
+        // Date range filter (timezone-safe local date comparison)
+        if (startDateObj && !isNaN(startDateObj.getTime())) {
+          const txDateObj = TransactionModel.parseLocalDate(tx.date || tx.createdTimestamp);
+          if (txDateObj < startDateObj) return false;
         }
-        if (filters.endDate) {
-          if (new Date(tx.date) > new Date(filters.endDate)) {
-            return false;
-          }
+        if (endDateObj && !isNaN(endDateObj.getTime())) {
+          const txDateObj = TransactionModel.parseLocalDate(tx.date || tx.createdTimestamp);
+          if (txDateObj > endDateObj) return false;
         }
 
         // Amount min/max
@@ -771,18 +933,63 @@ export class StorageEngine {
 
         return true;
       })
-      .sort((a, b) => new Date(b.date || b.createdTimestamp) - new Date(a.date || a.createdTimestamp));
+      .sort((a, b) => {
+        const diff = TransactionModel.parseLocalDate(b.date || b.createdTimestamp) - TransactionModel.parseLocalDate(a.date || a.createdTimestamp);
+        return diff !== 0 ? diff : (b.createdTimestamp || 0) - (a.createdTimestamp || 0);
+      });
   }
 
-  // Create Transaction with Audit Validation
+  async _validateTransactionPayload(tx) {
+    const amount = Number(tx.amount);
+    if (!Number.isFinite(amount)) {
+      throw new Error('Transaction amount must be a valid number.');
+    }
+    if (tx.type === 'adjustment') {
+      if (amount === 0) throw new Error('Adjustment amount must be non-zero.');
+    } else if (amount <= 0) {
+      throw new Error('Transaction amount must be greater than 0.');
+    }
+
+    if (!tx.accountId) {
+      throw new Error('Source accountId is required.');
+    }
+    const srcAcc = await this.get(STORES.ACCOUNTS, tx.accountId);
+    if (!srcAcc) {
+      throw new Error(`Account "${tx.accountId}" not found.`);
+    }
+
+    if (tx.type === 'transfer' || tx.type === 'credit_card_payment') {
+      if (!tx.targetAccountId) {
+        throw new Error(`Destination targetAccountId is required for ${tx.type}.`);
+      }
+      if (tx.targetAccountId === tx.accountId) {
+        throw new Error('Source and destination accounts must be different.');
+      }
+      const tgtAcc = await this.get(STORES.ACCOUNTS, tx.targetAccountId);
+      if (!tgtAcc) {
+        throw new Error(`Destination account "${tx.targetAccountId}" not found.`);
+      }
+    }
+  }
+
+  // Create Transaction with Validation & Immediate Balance Synchronization
   async addTransaction(txData) {
+    if (!this.db) await this.readyPromise;
+    if (txData.id) {
+      const existing = await this.get(STORES.TRANSACTIONS, txData.id);
+      if (existing) {
+        throw new Error(`Transaction with ID "${txData.id}" already exists.`);
+      }
+    }
+
+    const rawAmount = Number(txData.amount);
     const id = txData.id || `tx_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
     const tx = {
       id,
       accountId: txData.accountId,
       targetAccountId: txData.targetAccountId || null,
       type: txData.type || 'expense',
-      amount: Number(txData.amount) || 0,
+      amount: rawAmount,
       category: txData.category || 'Other Expense',
       subcategory: txData.subcategory || '',
       description: txData.description || 'Transaction',
@@ -793,12 +1000,15 @@ export class StorageEngine {
       aiAuditId: txData.aiAuditId || null
     };
 
+    await this._validateTransactionPayload(tx);
+    tx.amount = round2(tx.amount);
     await this.put(STORES.TRANSACTIONS, tx);
+    await this._syncStoredBalances();
     await this.saveLocalEmergencySnapshot();
     return tx;
   }
 
-  // Update Existing Transaction
+  // Update Existing Transaction with Validation & Immediate Balance Synchronization
   async updateTransaction(id, updateData) {
     if (!this.db) await this.readyPromise;
     const existing = await this.get(STORES.TRANSACTIONS, id);
@@ -806,11 +1016,16 @@ export class StorageEngine {
       throw new Error(`Transaction with ID "${id}" not found.`);
     }
 
+    const nextType = updateData.type || existing.type;
+    const nextTargetAccountId = (nextType === 'transfer' || nextType === 'credit_card_payment')
+      ? (updateData.targetAccountId !== undefined ? updateData.targetAccountId : existing.targetAccountId)
+      : (updateData.targetAccountId !== undefined ? updateData.targetAccountId : null);
+
     const updated = {
       ...existing,
       accountId: updateData.accountId !== undefined ? updateData.accountId : existing.accountId,
-      targetAccountId: updateData.targetAccountId !== undefined ? updateData.targetAccountId : existing.targetAccountId,
-      type: updateData.type || existing.type,
+      targetAccountId: nextTargetAccountId,
+      type: nextType,
       amount: updateData.amount !== undefined ? Number(updateData.amount) : existing.amount,
       category: updateData.category || existing.category,
       subcategory: updateData.subcategory !== undefined ? updateData.subcategory : existing.subcategory,
@@ -821,9 +1036,22 @@ export class StorageEngine {
       updatedTimestamp: Date.now()
     };
 
+    await this._validateTransactionPayload(updated);
+    updated.amount = round2(updated.amount);
     await this.put(STORES.TRANSACTIONS, updated);
+    await this._syncStoredBalances();
     await this.saveLocalEmergencySnapshot();
     return updated;
+  }
+
+  // Delete Transaction & Immediately Synchronize Account Balances
+  async deleteTransaction(id) {
+    if (!this.db) await this.readyPromise;
+    const existing = await this.get(STORES.TRANSACTIONS, id);
+    if (!existing) return false;
+    await this.delete(STORES.TRANSACTIONS, id);
+    await this.saveLocalEmergencySnapshot();
+    return true;
   }
 
   // AI Audit Logging
@@ -850,8 +1078,9 @@ export class StorageEngine {
     }
   }
 
-  // Export and Backup
+  // Export and Backup (always exports freshly synced account balances)
   async exportAllData() {
+    await this._syncStoredBalances();
     const data = {
       exportVersion: 1,
       exportTimestamp: new Date().toISOString(),
@@ -878,19 +1107,27 @@ export class StorageEngine {
       await this.clear(storeName);
     }
 
-    // Restore accounts
+    // Restore accounts (deduplicated by ID)
+    const seenAccIds = new Set();
     for (const item of jsonData.accounts) {
-      await this.put(STORES.ACCOUNTS, item);
+      if (!item || !item.id || seenAccIds.has(item.id)) continue;
+      seenAccIds.add(item.id);
+      await this._putRaw(STORES.ACCOUNTS, item);
     }
 
-    // Restore transactions
+    // Restore transactions (deduplicated by ID)
+    const seenTxIds = new Set();
     for (const item of jsonData.transactions) {
-      await this.put(STORES.TRANSACTIONS, item);
+      if (!item || !item.id || seenTxIds.has(item.id)) continue;
+      seenTxIds.add(item.id);
+      await this._putRaw(STORES.TRANSACTIONS, item);
     }
 
     // Restore categories
     if (jsonData.categories && Array.isArray(jsonData.categories) && jsonData.categories.length > 0) {
-      for (const item of jsonData.categories) await this.put(STORES.CATEGORIES, item);
+      for (const item of jsonData.categories) {
+        if (item && item.name) await this._putRaw(STORES.CATEGORIES, item);
+      }
     }
 
     // Auto-merge standard default categories ensuring none are missing
@@ -898,36 +1135,41 @@ export class StorageEngine {
     const existingNames = new Set(currentCategories.map(c => (c.name || '').toLowerCase()));
     for (const cat of DEFAULT_CATEGORIES) {
       if (!existingNames.has((cat.name || '').toLowerCase())) {
-        await this.put(STORES.CATEGORIES, cat);
+        await this._putRaw(STORES.CATEGORIES, cat);
       }
     }
 
     // Restore recurring schedules
     if (jsonData.recurring && Array.isArray(jsonData.recurring)) {
-      for (const item of jsonData.recurring) await this.put(STORES.RECURRING, item);
+      for (const item of jsonData.recurring) {
+        if (item && item.id) await this._putRaw(STORES.RECURRING, item);
+      }
     }
 
     // Restore AI audit logs
     if (jsonData.aiAuditLogs && Array.isArray(jsonData.aiAuditLogs)) {
-      for (const item of jsonData.aiAuditLogs) await this.put(STORES.AI_AUDIT, item);
+      for (const item of jsonData.aiAuditLogs) {
+        if (item && item.id) await this._putRaw(STORES.AI_AUDIT, item);
+      }
     }
 
     // Restore settings
     if (jsonData.settings && Array.isArray(jsonData.settings)) {
       for (const item of jsonData.settings) {
-        await this.put(STORES.SETTINGS, item);
+        if (!item || !item.key) continue;
+        await this._putRaw(STORES.SETTINGS, item);
         if (item.key === 'profile') {
-          if (item.currency && typeof localStorage !== 'undefined') localStorage.setItem('tm_currency', item.currency);
-          if (item.loginId && typeof localStorage !== 'undefined') localStorage.setItem('tm_login_id', item.loginId);
+          if (item.currency) lsSet('tm_currency', item.currency);
+          if (item.loginId) lsSet('tm_login_id', item.loginId);
         }
       }
     }
 
     // Mark demo as cleaned so restored accounts aren't purged
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('tm_demo_cleaned_v2', 'true');
-    }
+    lsSet('tm_demo_cleaned_v2', 'true');
 
+    this._invalidateCache();
+    await this._syncStoredBalances();
     await this.saveLocalEmergencySnapshot();
     return true;
   }
@@ -935,9 +1177,11 @@ export class StorageEngine {
   // Monthly Financial Analytics & Categorical Aggregations
   async getMonthlyReport(year, month) {
     if (!this.db) await this.readyPromise;
-    const transactions = await this.getAll(STORES.TRANSACTIONS);
-    const categories = await this.getAll(STORES.CATEGORIES);
-    const accounts = await this.getAll(STORES.ACCOUNTS);
+    const [transactions, categories, accounts] = await Promise.all([
+      this.getAll(STORES.TRANSACTIONS),
+      this.getAll(STORES.CATEGORIES),
+      this.getAll(STORES.ACCOUNTS)
+    ]);
 
     const catMap = new Map(categories.map(c => [(c.name || '').toLowerCase(), c]));
     const accMap = new Map(accounts.map(a => [a.id, a]));
@@ -950,12 +1194,14 @@ export class StorageEngine {
     let monthlyIncome = 0;
     let monthlyExpense = 0;
     let transferCount = 0;
+    let transferTotal = 0;
+    let creditCardPaymentTotal = 0;
     const categoryTotals = {};
     const categoryTxList = {};
     const monthTransactions = [];
 
     transactions.forEach(tx => {
-      const txDate = new Date(tx.date || tx.createdTimestamp);
+      const txDate = TransactionModel.parseLocalDate(tx.date || tx.createdTimestamp);
       const txYear = txDate.getFullYear();
       const txMonth = txDate.getMonth();
 
@@ -969,33 +1215,36 @@ export class StorageEngine {
 
         const amt = Number(tx.amount) || 0;
         if (tx.type === 'income') {
-          monthlyIncome += amt;
-        } else if (tx.type === 'expense') {
-          monthlyExpense += amt;
+          monthlyIncome = round2(monthlyIncome + amt);
+        } else if (tx.type === 'expense' || tx.type === 'purchase') {
+          monthlyExpense = round2(monthlyExpense + amt);
           const catName = tx.category || 'Other Expense';
-          categoryTotals[catName] = (categoryTotals[catName] || 0) + amt;
+          categoryTotals[catName] = round2((categoryTotals[catName] || 0) + amt);
           if (!categoryTxList[catName]) categoryTxList[catName] = [];
           categoryTxList[catName].push(enrichedTx);
         } else if (tx.type === 'transfer') {
           transferCount++;
+          transferTotal = round2(transferTotal + amt);
+        } else if (tx.type === 'credit_card_payment') {
+          creditCardPaymentTotal = round2(creditCardPaymentTotal + amt);
         }
       }
     });
 
-    const netSavings = monthlyIncome - monthlyExpense;
+    const netSavings = round2(monthlyIncome - monthlyExpense);
     const savingsRate = monthlyIncome > 0
-      ? ((netSavings / monthlyIncome) * 100).toFixed(1)
-      : (monthlyExpense > 0 ? -100 : 0);
+      ? Number(((netSavings / monthlyIncome) * 100).toFixed(1))
+      : 0;
 
     // Build Category Breakdown with percentage and color tokens
     const categoryBreakdown = Object.entries(categoryTotals)
       .map(([name, amount]) => {
         const catInfo = catMap.get(name.toLowerCase());
-        const pct = monthlyExpense > 0 ? ((amount / monthlyExpense) * 100).toFixed(1) : 0;
+        const pct = monthlyExpense > 0 ? Number(((amount / monthlyExpense) * 100).toFixed(1)) : 0;
         return {
           name,
-          amount,
-          percentage: Number(pct),
+          amount: round2(amount),
+          percentage: pct,
           count: categoryTxList[name]?.length || 0,
           icon: catInfo?.icon || '🏷️',
           color: catInfo?.color || '#6366f1',
@@ -1004,7 +1253,10 @@ export class StorageEngine {
       })
       .sort((a, b) => b.amount - a.amount);
 
-    monthTransactions.sort((a, b) => new Date(b.date || b.createdTimestamp) - new Date(a.date || a.createdTimestamp));
+    monthTransactions.sort((a, b) => {
+      const diff = TransactionModel.parseLocalDate(b.date || b.createdTimestamp) - TransactionModel.parseLocalDate(a.date || a.createdTimestamp);
+      return diff !== 0 ? diff : (b.createdTimestamp || 0) - (a.createdTimestamp || 0);
+    });
 
     return {
       year,
@@ -1013,11 +1265,13 @@ export class StorageEngine {
       income: monthlyIncome,
       expense: monthlyExpense,
       savings: netSavings,
-      savingsRate: Number(savingsRate),
+      savingsRate,
       categoryBreakdown,
       transactions: monthTransactions,
       txCount: monthTransactions.length,
-      transferCount
+      transferCount,
+      transferTotal,
+      creditCardPaymentTotal
     };
   }
 
@@ -1031,7 +1285,7 @@ export class StorageEngine {
     periods.add(`${prevMonth.getFullYear()}-${prevMonth.getMonth()}`);
 
     transactions.forEach(tx => {
-      const d = new Date(tx.date || tx.createdTimestamp);
+      const d = TransactionModel.parseLocalDate(tx.date || tx.createdTimestamp);
       if (!isNaN(d.getTime())) {
         periods.add(`${d.getFullYear()}-${d.getMonth()}`);
       }

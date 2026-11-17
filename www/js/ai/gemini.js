@@ -3,21 +3,24 @@ import { AccountModel } from '../models/account.js';
 import { TransactionModel } from '../models/transaction.js';
 import { APP_CONFIG } from '../config.js';
 
+const lsGet = (k) => (typeof localStorage !== 'undefined' ? localStorage.getItem(k) : null);
+const lsSet = (k, v) => { if (typeof localStorage !== 'undefined') localStorage.setItem(k, v); };
+
 export class GeminiService {
   static DEFAULT_KEY = APP_CONFIG?.DEFAULT_GEMINI_KEY || '';
   static DEFAULT_MODEL = APP_CONFIG?.GEMINI_MODEL || 'gemini-3.5-flash';
 
   static getApiKey() {
-    return localStorage.getItem('tm_gemini_api_key') || this.DEFAULT_KEY;
+    return lsGet('tm_gemini_api_key') || this.DEFAULT_KEY;
   }
 
   static getModel() {
-    return localStorage.getItem('tm_gemini_model') || this.DEFAULT_MODEL;
+    return lsGet('tm_gemini_model') || this.DEFAULT_MODEL;
   }
 
   static saveConfig(key, model) {
-    if (key) localStorage.setItem('tm_gemini_api_key', key.trim());
-    if (model) localStorage.setItem('tm_gemini_model', model.trim());
+    if (key) lsSet('tm_gemini_api_key', key.trim());
+    if (model) lsSet('tm_gemini_model', model.trim());
   }
 
   static isConfigured() {
@@ -67,20 +70,23 @@ export class GeminiService {
 
     const systemPrompt = this.buildSystemPrompt(context);
 
-    // Build chat conversation turns
+    // Build chat conversation turns (avoid duplicating userMessage if already pushed to history)
     const contents = [];
-
-    // Add recent conversation history (up to last 6 turns)
     const recentHistory = (history || []).slice(-6);
-    for (const h of recentHistory) {
-      if (h.sender === 'user') {
+    const lastHist = recentHistory[recentHistory.length - 1];
+    const historyToInclude = (lastHist && lastHist.sender === 'user' && lastHist.text === userMessage)
+      ? recentHistory.slice(0, -1)
+      : recentHistory;
+
+    for (const h of historyToInclude) {
+      if (h.sender === 'user' && h.text) {
         contents.push({ role: 'user', parts: [{ text: h.text }] });
       } else if (h.sender === 'ai' && h.text) {
         contents.push({ role: 'model', parts: [{ text: h.text }] });
       }
     }
 
-    // Add current user message
+    // Add current user message once
     contents.push({
       role: 'user',
       parts: [{ text: userMessage }]
@@ -94,13 +100,13 @@ export class GeminiService {
         parts: [{ text: systemPrompt }]
       },
       generationConfig: {
-        temperature: 0.3,
-        maxOutputTokens: 600
+        temperature: 0.25,
+        maxOutputTokens: 700
       }
     };
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 20000);
+    const timeout = setTimeout(() => controller.abort(), 15000);
 
     try {
       const response = await fetch(url, {
@@ -139,12 +145,14 @@ export class GeminiService {
   }
 
   /**
-   * Compact, High-Speed System Prompt incorporating real financial data
+   * Compact, High-Speed System Prompt incorporating real financial data & pre-computed analytics
    */
   static buildSystemPrompt(context) {
-    const currency = localStorage.getItem('tm_currency') || '₹';
+    const currency = lsGet('tm_currency') || '₹';
     const netPos = context?.netPosition ?? 0;
     const totalAssets = context?.totalAssets ?? 0;
+    const liquidAssets = context?.liquidAssets ?? totalAssets;
+    const investedAssets = context?.investedAssets ?? 0;
     const totalLiabilities = context?.totalLiabilities ?? 0;
     const income = context?.thisMonthIncome ?? 0;
     const expense = context?.thisMonthExpense ?? 0;
@@ -153,111 +161,80 @@ export class GeminiService {
     const utilRate = context?.overallCreditUtilization ?? 0;
 
     const accountsStr = (context?.accounts || [])
-      .map(a => `- ${a.name} (${a.type}): ${a.category === 'debit' ? `Bal ${currency}${a.balance}` : `Debt ${currency}${a.outstanding} (Limit ${currency}${a.limit}, ${a.utilizationRate}% util)`}`)
+      .map(a => `- ${a.name} (${a.type}): ${a.category === 'debit' ? `Bal ${currency}${a.balance}` : `Debt ${currency}${a.outstanding} / Limit ${currency}${a.limit} (Avail ${currency}${a.availableCredit}, ${a.utilizationRate}% util)`}`)
       .join('\n');
 
     const catSpendingStr = Object.entries(context?.categorySpending || {})
+      .sort((a, b) => b[1] - a[1])
       .map(([cat, amt]) => `- ${cat}: ${currency}${amt}`)
       .join('\n') || 'None recorded yet';
 
-    const recentTxStr = (context?.recentTransactions || []).slice(0, 10)
-      .map(t => `- [${t.date}] ${t.type.toUpperCase()}: ${currency}${t.amount} (${t.category}) on "${t.accountName}"${t.description ? ' - ' + t.description : ''}`)
+    const recentTxStr = (context?.recentTransactions || []).slice(0, 15)
+      .map(t => `- [${t.date}] ${t.type.toUpperCase()}: ${currency}${t.amount} (${t.category}) on "${t.accountName}"${t.targetAccountName ? ' -> "' + t.targetAccountName + '"' : ''}${t.description ? ' - ' + t.description : ''}`)
       .join('\n') || 'No recent transactions';
 
     const categoriesList = (context?.categories || []).map(c => typeof c === 'string' ? c : c.name).join(', ');
 
-    return `You are Track-Money AI Co-Pilot, the user's personal financial advisor and in-app agent.
-You have direct read access to live financial metrics, and write access via structured actions.
+    const ins = context?.insights || {};
+    const monthlyHistStr = (ins.monthlyHistory || [])
+      .map(m => `- ${m.label}: Income ${currency}${m.income}, Expense ${currency}${m.expense}, Savings ${currency}${m.savings} (${m.savingsRate}%)`)
+      .join('\n') || 'Single month only';
 
-### LIVE FINANCIAL STATE:
+    const trendsStr = ins.trends?.previousPeriod
+      ? `Vs ${ins.trends.previousPeriod}: Expenses ${ins.trends.expenseChange >= 0 ? '+' : ''}${currency}${ins.trends.expenseChange} (${ins.trends.expenseChangePct ?? 0}%). Rising: ${(ins.trends.risingCategories || []).map(c => `${c.category} +${currency}${c.delta}`).join(', ') || 'None'}.`
+      : 'No prior month comparison yet.';
+
+    const anomaliesStr = [
+      ...(ins.anomalies?.unusualTransactions || []).map(t => `Outlier: ${currency}${t.amount} ${t.category} (${t.description}) on ${t.date} - ${t.reason}`),
+      ...(ins.anomalies?.potentialDuplicates || []).map(d => `Possible duplicate: ${d.count}x ${currency}${d.amount} (${d.type}) on ${d.accountName} on ${d.date}`)
+    ].join('\n') || 'None detected';
+
+    const alertsStr = [
+      ...(ins.highUtilizationCards || []).map(c => `High Util: ${c.name} at ${c.utilizationRate}% (pay ${currency}${c.payoffToReach30} to drop under 30%)`),
+      ...(ins.liquidityAlerts || []).map(a => `Low Balance: ${a.accountName} (${currency}${a.accountBalance}) < recurring ${a.recurringTitle} (${currency}${a.recurringAmount})`),
+      ...(ins.trends?.missingSalaryDetected ? [`Missing Salary: Previous month had ${currency}${ins.trends.previousSalaryAmount} salary; none logged this month yet.`] : [])
+    ].join('\n') || 'None';
+
+    return `You are Track-Money AI, a fast, data-driven personal finance advisor and in-app agent.
+Ground EVERY answer strictly in the verified live data below. Never fabricate numbers or transactions.
+
+### LIVE FINANCIAL STATE (${context?.activePeriod || 'Current'}):
 - Net Worth: ${currency}${netPos.toLocaleString('en-IN')}
-- Assets: ${currency}${totalAssets.toLocaleString('en-IN')} | Debt: ${currency}${totalLiabilities.toLocaleString('en-IN')} (Util: ${utilRate}%)
-- Month Income: ${currency}${income.toLocaleString('en-IN')} | Expenses: ${currency}${expense.toLocaleString('en-IN')} | Savings: ${currency}${savings.toLocaleString('en-IN')} (${savingsRate}%)
+- Assets: ${currency}${totalAssets.toLocaleString('en-IN')} (Liquid: ${currency}${liquidAssets.toLocaleString('en-IN')} | Invested: ${currency}${investedAssets.toLocaleString('en-IN')})
+- Debt: ${currency}${totalLiabilities.toLocaleString('en-IN')} (Overall Util: ${utilRate}%)
+- This Month: Income ${currency}${income.toLocaleString('en-IN')} | Expenses ${currency}${expense.toLocaleString('en-IN')} | Savings ${currency}${savings.toLocaleString('en-IN')} (${savingsRate}%)
 
 ### ACCOUNTS:
 ${accountsStr || 'No accounts created yet'}
 
-### THIS MONTH SPENDING:
+### THIS MONTH SPENDING BY CATEGORY:
 ${catSpendingStr}
+
+### MONTHLY HISTORY:
+${monthlyHistStr}
+
+### TRENDS & PATTERNS:
+${trendsStr}
+
+### UNUSUAL SPENDING & ANOMALIES:
+${anomaliesStr}
+
+### ALERTS & RISKS:
+${alertsStr}
 
 ### CATEGORIES:
 ${categoriesList}
 
-### RECENT TRANSACTIONS (Top 10):
+### RECENT TRANSACTIONS (Top 15):
 ${recentTxStr}
 
-### YOUR ROLE & INSTRUCTIONS:
-1. **Financial Advisory & Insights**:
-   - When asked what to improve, what they spend too much on, or how to save: deeply analyze their category spending and transaction history.
-   - Point out specific spending leaks (e.g., dining, quick commerce, subscriptions, impulse shopping).
-   - If Credit Card utilization > 30%, explicitly warn them that it harms their credit score and recommend paying it down immediately.
-   - Give realistic, numbered, highly motivating recommendations with specific numbers.
-
-2. **Transaction Queries**:
-   - When asked about their transactions (e.g. "What did I spend on food?", "List all transactions above 2000", "Show my last 5 expenses"), calculate the exact numbers from the data above and list them cleanly.
-
-3. **In-App Action Execution (Crucial)**:
-   Whenever the user asks you to take an action inside the app, describe what you are doing in your text, and ALWAYS output a single JSON block at the very end of your response with the action structure:
-
-   A) **Create Category** (e.g. "create category Gym with red tag" or "add a new category for Pet Care"):
-   \`\`\`json
-   {
-     "action": "create_category",
-     "parameters": {
-       "name": "Category Name",
-       "type": "expense",
-       "icon": "🏷️",
-       "color": "#ef4444"
-     }
-   }
-   \`\`\`
-
-   B) **Log Transaction** (Expense or Income):
-   \`\`\`json
-   {
-     "action": "create_transaction",
-     "parameters": {
-       "type": "expense",
-       "amount": 500,
-       "accountName": "HDFC Bank",
-       "category": "Food & Dining",
-       "subcategory": "Lunch",
-       "description": "Lunch with team"
-     }
-   }
-   \`\`\`
-
-   C) **Transfer Money or Pay Credit Card**:
-   \`\`\`json
-   {
-     "action": "transfer_money",
-     "parameters": {
-       "fromAccount": "HDFC Bank",
-       "toAccount": "ICICI Credit Card",
-       "amount": 5000,
-       "description": "Credit card bill payment",
-       "isCreditCardPayment": true
-     }
-   }
-   \`\`\`
-
-   D) **Create Account**:
-   \`\`\`json
-   {
-     "action": "create_account",
-     "parameters": {
-       "name": "SBI Savings",
-       "category": "debit",
-       "type": "Savings Account",
-       "openingBalance": 10000
-     }
-   }
-   \`\`\`
-
-4. **Tone & Style**:
-   - Modern, executive, punchy, concise, and helpful.
-   - Use bold numbers and clear formatting.
-   - Do not make up fake transactions; only ground your answers in the real data provided above.`;
+### INSTRUCTIONS:
+1. Give concise, specific, number-backed insights, trends, anomaly callouts, and personalized savings recommendations using ONLY the actual figures above.
+2. When asked to perform an in-app action (create category, log expense/income, transfer money, pay credit card, create account), briefly describe it and append ONE JSON block at the very end:
+   - create_category: {"action":"create_category","parameters":{"name":"...","type":"expense","icon":"🏷️","color":"#ef4444"}}
+   - create_transaction: {"action":"create_transaction","parameters":{"type":"expense","amount":500,"accountName":"ICICI","category":"Food","subcategory":"Lunch","description":"..."}}
+   - transfer_money: {"action":"transfer_money","parameters":{"fromAccount":"ICICI","toAccount":"IOB","amount":5000,"description":"...","isCreditCardPayment":false}}
+   - create_account: {"action":"create_account","parameters":{"name":"SBI Savings","category":"debit","type":"Savings Account","openingBalance":10000}}`;
   }
 
   /**
@@ -283,6 +260,18 @@ ${recentTxStr}
     }
 
     return { cleanText: text, action: null };
+  }
+
+  static _findAccountByName(accounts, nameQuery, preferredCategory = null) {
+    const q = (nameQuery || '').trim().toLowerCase();
+    if (!q) return null;
+    const pool = preferredCategory ? accounts.filter(a => a.category === preferredCategory) : accounts;
+    const exact = pool.find(a => (a.name || '').toLowerCase() === q)
+      || accounts.find(a => (a.name || '').toLowerCase() === q);
+    if (exact) return exact;
+    return pool.find(a => (a.name || '').toLowerCase().includes(q) || q.includes((a.name || '').toLowerCase()))
+      || accounts.find(a => (a.name || '').toLowerCase().includes(q) || q.includes((a.name || '').toLowerCase()))
+      || null;
   }
 
   /**
@@ -313,42 +302,60 @@ ${recentTxStr}
     }
 
     if (actionType === 'create_transaction') {
-      const accounts = await storage.getAll('accounts');
-      let acc = accounts.find(a => (a.name || '').toLowerCase() === (params.accountName || '').toLowerCase());
+      const accounts = await storage.getAccountsWithCalculatedBalances();
+      const amount = Number(params.amount);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        throw new Error('Transaction amount must be greater than 0.');
+      }
+
+      let acc = this._findAccountByName(accounts, params.accountName);
       if (!acc) {
-        // Fallback to first debit account or first account
         acc = accounts.find(a => a.category === 'debit') || accounts[0];
       }
       if (!acc) throw new Error('No accounts available to attach transaction to.');
 
       const tx = {
         type: params.type || 'expense',
-        amount: Number(params.amount) || 0,
+        amount,
         accountId: acc.id,
-        category: params.category || 'General',
+        category: params.category || (params.type === 'income' ? 'Other Income' : 'Other Expense'),
         subcategory: params.subcategory || '',
         description: params.description || '',
-        date: new Date().toISOString().split('T')[0],
+        date: params.date || new Date().toISOString().split('T')[0],
         paymentMethod: acc.category === 'credit' ? 'Credit Card' : 'UPI'
       };
 
       await storage.addTransaction(tx);
+      const updated = await storage.getAccountById(acc.id);
+      const balInfo = updated.category === 'credit'
+        ? `Outstanding: ${AccountModel.formatCurrency(updated.currentOutstanding)}`
+        : `New Balance: ${AccountModel.formatCurrency(updated.currentBalance)}`;
+
       return {
         success: true,
-        message: `Recorded ${tx.type} of ${AccountModel.formatCurrency(tx.amount)} in ${acc.name} under ${tx.category}!`
+        message: `Recorded ${tx.type} of ${AccountModel.formatCurrency(tx.amount)} in ${acc.name} under ${tx.category}! (${balInfo})`
       };
     }
 
     if (actionType === 'transfer_money') {
-      const accounts = await storage.getAll('accounts');
-      const fromAcc = accounts.find(a => (a.name || '').toLowerCase().includes((params.fromAccount || '').toLowerCase())) || accounts.find(a => a.category === 'debit');
-      const toAcc = accounts.find(a => (a.name || '').toLowerCase().includes((params.toAccount || '').toLowerCase()));
+      const accounts = await storage.getAccountsWithCalculatedBalances();
+      const amount = Number(params.amount);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        throw new Error('Transfer amount must be greater than 0.');
+      }
+
+      const fromAcc = this._findAccountByName(accounts, params.fromAccount, 'debit')
+        || accounts.find(a => a.category === 'debit');
+      const preferToCat = params.isCreditCardPayment ? 'credit' : null;
+      const toAcc = this._findAccountByName(accounts, params.toAccount, preferToCat);
 
       if (!fromAcc || !toAcc) {
         throw new Error(`Could not locate accounts for transfer: "${params.fromAccount}" to "${params.toAccount}"`);
       }
+      if (fromAcc.id === toAcc.id) {
+        throw new Error('Source and destination accounts must be different.');
+      }
 
-      const amount = Number(params.amount) || 0;
       const isCC = toAcc.category === 'credit' || params.isCreditCardPayment;
 
       await storage.addTransaction({
@@ -356,16 +363,21 @@ ${recentTxStr}
         accountId: fromAcc.id,
         targetAccountId: toAcc.id,
         amount,
-        category: isCC ? 'Credit Card Payment' : 'Transfer',
-        subcategory: isCC ? 'Card Payoff' : 'Account Transfer',
+        category: isCC ? 'Bills & Utilities' : 'Transfer',
+        subcategory: isCC ? 'Credit Card Bill' : 'Account Transfer',
         description: params.description || (isCC ? `Card Bill Payment: ${fromAcc.name} ➔ ${toAcc.name}` : `Transfer: ${fromAcc.name} ➔ ${toAcc.name}`),
-        date: new Date().toISOString().split('T')[0],
+        date: params.date || new Date().toISOString().split('T')[0],
         paymentMethod: 'Bank Transfer'
       });
 
+      const [updatedFrom, updatedTo] = await Promise.all([
+        storage.getAccountById(fromAcc.id),
+        storage.getAccountById(toAcc.id)
+      ]);
+
       return {
         success: true,
-        message: `Successfully transferred ${AccountModel.formatCurrency(amount)} from ${fromAcc.name} to ${toAcc.name}${isCC ? ' (Debt Reduced!)' : ''}!`
+        message: `Transferred ${AccountModel.formatCurrency(amount)} from ${fromAcc.name} (${AccountModel.formatCurrency(updatedFrom.currentBalance)}) to ${toAcc.name} (${isCC ? 'Outstanding: ' + AccountModel.formatCurrency(updatedTo.currentOutstanding) : AccountModel.formatCurrency(updatedTo.currentBalance)})!`
       };
     }
 

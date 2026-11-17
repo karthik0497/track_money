@@ -84,9 +84,7 @@ class TrackMoneyApp {
     document.querySelectorAll('.nav-item').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const viewName = e.currentTarget.dataset.view;
-        if (viewName === 'assistant') {
-          this.openAiAssistant();
-        } else if (viewName === 'more') {
+        if (viewName === 'more') {
           this.toggleMoreSheet();
         } else if (viewName) {
           this.closeMoreSheet();
@@ -104,11 +102,6 @@ class TrackMoneyApp {
           this.navigateTo(viewName);
         }
       });
-    });
-
-    document.getElementById('nav-voice-assistant')?.addEventListener('click', () => {
-      this.closeMoreSheet();
-      this.openAiAssistant();
     });
 
     document.getElementById('close-more-sheet')?.addEventListener('click', () => {
@@ -591,8 +584,10 @@ class TrackMoneyApp {
   // Transaction Modal (Add / Edit)
   async openTransactionModal(options = {}) {
     const modalRoot = document.getElementById('global-modal-root');
-    const accounts = await this.storage.getAll('accounts');
-    const categories = await this.storage.getAll('categories');
+    const [accounts, categories] = await Promise.all([
+      this.storage.getAccountsWithCalculatedBalances(),
+      this.storage.getAll('categories')
+    ]);
 
     let editTx = options.editTx || null;
     if (options.editTxId) {
@@ -636,7 +631,7 @@ class TrackMoneyApp {
               <select name="accountId" class="form-input" required>
                 ${accounts.map(a => `
                   <option value="${a.id}" ${a.id === defaultAccId ? 'selected' : ''}>
-                    ${a.icon || '🏦'} ${a.name} (${a.category === 'credit' ? 'Credit / Limit: ' + AccountModel.formatCurrency(a.creditLimit) : 'Bal: ' + AccountModel.formatCurrency(a.currentBalance)})
+                    ${a.icon || '🏦'} ${a.name} (${a.category === 'credit' ? 'Avail: ' + AccountModel.formatCurrency(a.availableCredit) + ' / Due: ' + AccountModel.formatCurrency(a.currentOutstanding) : 'Bal: ' + AccountModel.formatCurrency(a.currentBalance)})
                   </option>
                 `).join('')}
               </select>
@@ -688,7 +683,7 @@ class TrackMoneyApp {
 
             <div class="modal-footer">
               <button type="button" class="btn btn-outline" id="cancel-tx-modal">Cancel</button>
-              <button type="submit" class="btn btn-primary">${isEdit ? 'Update Transaction' : 'Save Transaction'}</button>
+              <button type="submit" class="btn btn-primary" id="btn-submit-tx">${isEdit ? 'Update Transaction' : 'Save Transaction'}</button>
             </div>
           </form>
         </div>
@@ -701,37 +696,54 @@ class TrackMoneyApp {
       if (e.target.id === 'tx-modal-backdrop') modalRoot.innerHTML = '';
     });
 
+    let isSubmittingTx = false;
     document.getElementById('global-tx-form')?.addEventListener('submit', async (e) => {
       e.preventDefault();
+      if (isSubmittingTx) return;
+      const submitBtn = document.getElementById('btn-submit-tx');
       const fd = new FormData(e.target);
-      const txPayload = {
-        type: fd.get('type'),
-        amount: Number(fd.get('amount')),
-        accountId: fd.get('accountId'),
-        category: fd.get('category'),
-        subcategory: fd.get('subcategory') || '',
-        description: fd.get('description'),
-        date: fd.get('date'),
-        paymentMethod: fd.get('paymentMethod'),
-        notes: fd.get('notes') || ''
-      };
+      const amount = Number(fd.get('amount'));
+      if (!Number.isFinite(amount) || amount <= 0) {
+        alert('Please enter a valid amount greater than 0.');
+        return;
+      }
 
-      let resultTx;
-      if (isEdit && editTx.id) {
-        resultTx = await this.storage.updateTransaction(editTx.id, txPayload);
-        modalRoot.innerHTML = '';
-        await this.refreshCurrentView();
-        this.showToast(`Updated ${resultTx.type.toUpperCase()}: ${AccountModel.formatCurrency(resultTx.amount)}`);
-      } else {
-        resultTx = await this.storage.addTransaction(txPayload);
-        modalRoot.innerHTML = '';
-        await this.refreshCurrentView();
-        this.showToast(`Recorded ${resultTx.type.toUpperCase()}: ${AccountModel.formatCurrency(resultTx.amount)}`);
+      isSubmittingTx = true;
+      if (submitBtn) submitBtn.disabled = true;
+
+      try {
+        const txPayload = {
+          type: fd.get('type'),
+          amount,
+          accountId: fd.get('accountId'),
+          category: fd.get('category'),
+          subcategory: fd.get('subcategory') || '',
+          description: fd.get('description'),
+          date: fd.get('date'),
+          paymentMethod: fd.get('paymentMethod'),
+          notes: fd.get('notes') || ''
+        };
+
+        let resultTx;
+        if (isEdit && editTx.id) {
+          resultTx = await this.storage.updateTransaction(editTx.id, txPayload);
+          modalRoot.innerHTML = '';
+          await this.refreshCurrentView();
+          this.showToast(`Updated ${resultTx.type.toUpperCase()}: ${AccountModel.formatCurrency(resultTx.amount)}`);
+        } else {
+          resultTx = await this.storage.addTransaction(txPayload);
+          modalRoot.innerHTML = '';
+          await this.refreshCurrentView();
+          this.showToast(`Recorded ${resultTx.type.toUpperCase()}: ${AccountModel.formatCurrency(resultTx.amount)}`);
+        }
+      } catch (err) {
+        isSubmittingTx = false;
+        if (submitBtn) submitBtn.disabled = false;
+        alert(err.message || 'Could not save transaction.');
       }
     });
   }
 
-  // Transfer Modal
   // Universal Transfer & Pay Modal (Savings to Credit Card, Bank to Bank, External Bank)
   async openTransferModal(options = {}) {
     const modalRoot = document.getElementById('global-modal-root');
@@ -747,13 +759,31 @@ class TrackMoneyApp {
     // Determine initial mode: 'bank_to_bank', 'pay_card', 'external_bank'
     let currentMode = options.mode || (options.toAccountId && creditAccounts.some(c => c.id === options.toAccountId) ? 'pay_card' : (debitAccounts.length > 1 ? 'bank_to_bank' : (creditAccounts.length > 0 ? 'pay_card' : 'external_bank')));
 
-    const defaultFrom = options.fromAccountId || debitAccounts[0]?.id;
-    let defaultToCard = options.toAccountId && creditAccounts.some(c => c.id === options.toAccountId) ? options.toAccountId : creditAccounts[0]?.id;
-    let defaultToDebit = options.toAccountId && debitAccounts.some(d => d.id === options.toAccountId && d.id !== defaultFrom) 
-      ? options.toAccountId 
-      : (debitAccounts.find(a => a.id !== defaultFrom)?.id || debitAccounts[0]?.id);
+    let selectedFrom = options.fromAccountId || debitAccounts[0]?.id;
+    let selectedToCard = options.toAccountId && creditAccounts.some(c => c.id === options.toAccountId) ? options.toAccountId : creditAccounts[0]?.id;
+    let selectedToDebit = options.toAccountId && debitAccounts.some(d => d.id === options.toAccountId && d.id !== selectedFrom)
+      ? options.toAccountId
+      : (debitAccounts.find(a => a.id !== selectedFrom)?.id || debitAccounts[0]?.id);
 
-    const initialAmount = options.amount || '';
+    let enteredAmount = options.amount || '';
+    let enteredDate = new Date().toISOString().split('T')[0];
+    let enteredDesc = '';
+
+    const captureCurrentInputs = () => {
+      const amtEl = document.getElementById('transfer-amount-input');
+      const fromEl = document.getElementById('from-acc-select');
+      const toEl = document.getElementById('to-acc-select');
+      const dateEl = document.querySelector('#transfer-form input[name="date"]');
+      const descEl = document.querySelector('#transfer-form input[name="description"]');
+      if (amtEl) enteredAmount = amtEl.value;
+      if (fromEl) selectedFrom = fromEl.value;
+      if (toEl) {
+        if (currentMode === 'pay_card') selectedToCard = toEl.value;
+        else if (currentMode === 'bank_to_bank') selectedToDebit = toEl.value;
+      }
+      if (dateEl && dateEl.value) enteredDate = dateEl.value;
+      if (descEl) enteredDesc = descEl.value;
+    };
 
     const renderModalContent = () => {
       modalRoot.innerHTML = `
@@ -788,17 +818,17 @@ class TrackMoneyApp {
                   <span style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-weight: 800; font-size: 1.35rem; color: var(--color-primary);">₹</span>
                   <input type="number" name="amount" id="transfer-amount-input" class="form-input font-bold" 
                          style="padding-left: 36px; font-size: 1.4rem; color: var(--text-yellow);" 
-                         placeholder="0.00" value="${initialAmount}" min="1" step="any" required autofocus>
+                         placeholder="0.00" value="${enteredAmount}" min="0.01" step="any" required autofocus>
                 </div>
               </div>
 
               <!-- From Account -->
               <div class="form-group">
-                <label class="text-xs text-muted font-bold">FROM ACCOUNT (SAVINGS / BANK / CASH)</label>
+                <label class="text-xs text-muted font-bold">FROM ACCOUNT</label>
                 <select name="fromAccountId" id="from-acc-select" class="form-input" required>
                   ${debitAccounts.map(a => `
-                    <option value="${a.id}" ${a.id === defaultFrom ? 'selected' : ''}>
-                      ${a.name} — Balance: ${AccountModel.formatCurrency(a.currentBalance)}
+                    <option value="${a.id}" ${a.id === selectedFrom ? 'selected' : ''}>
+                      ${a.name} — Available: ${AccountModel.formatCurrency(a.currentBalance)}
                     </option>
                   `).join('')}
                 </select>
@@ -807,18 +837,15 @@ class TrackMoneyApp {
               <!-- Destination Mode Fields -->
               ${currentMode === 'pay_card' ? `
                 <div class="form-group">
-                  <label class="text-xs text-muted font-bold">TO CREDIT CARD (BILL PAYOFF)</label>
+                  <label class="text-xs text-muted font-bold">TO CREDIT CARD</label>
                   ${creditAccounts.length > 0 ? `
                     <select name="toAccountId" id="to-acc-select" class="form-input" required>
                       ${creditAccounts.map(a => `
-                        <option value="${a.id}" ${a.id === defaultToCard ? 'selected' : ''}>
-                          ${a.name} — Outstanding Due: ${AccountModel.formatCurrency(a.currentOutstanding)} (Limit: ${AccountModel.formatCurrency(a.creditLimit)})
+                        <option value="${a.id}" ${a.id === selectedToCard ? 'selected' : ''}>
+                          ${a.name} — Due: ${AccountModel.formatCurrency(a.currentOutstanding)} | Avail: ${AccountModel.formatCurrency(a.availableCredit)}
                         </option>
                       `).join('')}
                     </select>
-                    <div style="margin-top: 6px; font-size: 0.75rem; color: var(--color-warning);">
-                      ⚡ This payment will decrease your credit card debt and restore your available limit immediately.
-                    </div>
                   ` : `
                     <div class="card" style="padding: 10px; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3); font-size: 0.82rem;">
                       No credit card accounts found. Add a credit card in Accounts first.
@@ -827,23 +854,20 @@ class TrackMoneyApp {
                 </div>
               ` : currentMode === 'bank_to_bank' ? `
                 <div class="form-group">
-                  <label class="text-xs text-muted font-bold">TO MY ACCOUNT (DEBIT / ASSET)</label>
+                  <label class="text-xs text-muted font-bold">TO ACCOUNT</label>
                   <select name="toAccountId" id="to-acc-select" class="form-input" required>
                     ${debitAccounts.map(a => `
-                      <option value="${a.id}" ${a.id === defaultToDebit ? 'selected' : ''}>
-                        ${a.name} — Current: ${AccountModel.formatCurrency(a.currentBalance)}
+                      <option value="${a.id}" ${a.id === selectedToDebit ? 'selected' : ''}>
+                        ${a.name} — Available: ${AccountModel.formatCurrency(a.currentBalance)}
                       </option>
                     `).join('')}
                   </select>
                 </div>
               ` : `
                 <div class="form-group">
-                  <label class="text-xs text-muted font-bold">TO EXTERNAL BENEFICIARY / ANY BANK</label>
+                  <label class="text-xs text-muted font-bold">TO EXTERNAL BENEFICIARY</label>
                   <input type="text" name="externalBeneficiary" class="form-input" 
                          placeholder="Beneficiary Name / External Bank / UPI ID" required>
-                  <div style="margin-top: 6px; font-size: 0.75rem; color: var(--text-muted);">
-                    Transfers to external banks or outside recipients will be recorded as a bank transfer out.
-                  </div>
                 </div>
               `}
 
@@ -851,11 +875,11 @@ class TrackMoneyApp {
               <div class="grid-2-col">
                 <div class="form-group">
                   <label class="text-xs text-muted font-bold">DATE</label>
-                  <input type="date" name="date" class="form-input" value="${new Date().toISOString().split('T')[0]}" required>
+                  <input type="date" name="date" class="form-input" value="${enteredDate}" required>
                 </div>
                 <div class="form-group">
                   <label class="text-xs text-muted font-bold">REFERENCE / NOTE</label>
-                  <input type="text" name="description" class="form-input" placeholder="e.g. Card bill, rent, transfer">
+                  <input type="text" name="description" class="form-input" placeholder="e.g. Card bill, rent, transfer" value="${enteredDesc}">
                 </div>
               </div>
 
@@ -870,16 +894,19 @@ class TrackMoneyApp {
         </div>
       `;
 
-      // Event handlers for mode toggling
+      // Event handlers for mode toggling (preserving user inputs)
       document.getElementById('tab-mode-internal')?.addEventListener('click', () => {
+        captureCurrentInputs();
         currentMode = 'bank_to_bank';
         renderModalContent();
       });
       document.getElementById('tab-mode-card')?.addEventListener('click', () => {
+        captureCurrentInputs();
         currentMode = 'pay_card';
         renderModalContent();
       });
       document.getElementById('tab-mode-external')?.addEventListener('click', () => {
+        captureCurrentInputs();
         currentMode = 'external_bank';
         renderModalContent();
       });
@@ -887,9 +914,13 @@ class TrackMoneyApp {
       document.getElementById('close-transfer-modal')?.addEventListener('click', () => modalRoot.innerHTML = '');
       document.getElementById('cancel-transfer-modal')?.addEventListener('click', () => modalRoot.innerHTML = '');
 
-      // Form submit handler
+      // Form submit handler with double-submit prevention
+      let isSubmittingTransfer = false;
       document.getElementById('transfer-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
+        if (isSubmittingTransfer) return;
+
+        const submitBtn = document.getElementById('btn-submit-transfer');
         const fd = new FormData(e.target);
         const fromId = fd.get('fromAccountId');
         const amount = Number(fd.get('amount'));
@@ -897,76 +928,93 @@ class TrackMoneyApp {
         const customDesc = fd.get('description');
         const fromAcc = accounts.find(a => a.id === fromId);
 
+        if (!Number.isFinite(amount) || amount <= 0) {
+          alert('Please enter a valid transfer amount greater than 0.');
+          return;
+        }
         if (!fromAcc) {
           alert('Please select a valid source account.');
           return;
         }
 
-        if (currentMode === 'pay_card') {
-          const toId = fd.get('toAccountId');
-          const cardAcc = accounts.find(a => a.id === toId);
-          if (!cardAcc) {
-            alert('Please select a credit card account to pay.');
-            return;
+        isSubmittingTransfer = true;
+        if (submitBtn) submitBtn.disabled = true;
+
+        try {
+          if (currentMode === 'pay_card') {
+            const toId = fd.get('toAccountId');
+            const cardAcc = accounts.find(a => a.id === toId);
+            if (!cardAcc) {
+              alert('Please select a credit card account to pay.');
+              isSubmittingTransfer = false;
+              if (submitBtn) submitBtn.disabled = false;
+              return;
+            }
+
+            await this.storage.addTransaction({
+              type: 'credit_card_payment',
+              accountId: fromId,
+              targetAccountId: toId,
+              amount,
+              category: 'Bills & Utilities',
+              subcategory: 'Credit Card Bill',
+              description: customDesc || `Card Bill Payment: ${fromAcc.name} ➔ ${cardAcc.name}`,
+              date,
+              paymentMethod: 'Net Banking'
+            });
+
+            modalRoot.innerHTML = '';
+            await this.refreshCurrentView();
+            this.showToast(`Paid ${AccountModel.formatCurrency(amount)} towards ${cardAcc.name} successfully!`);
+
+          } else if (currentMode === 'bank_to_bank') {
+            const toId = fd.get('toAccountId');
+            if (fromId === toId) {
+              alert('Source and destination accounts must be different.');
+              isSubmittingTransfer = false;
+              if (submitBtn) submitBtn.disabled = false;
+              return;
+            }
+            const toAcc = accounts.find(a => a.id === toId);
+
+            await this.storage.addTransaction({
+              type: 'transfer',
+              accountId: fromId,
+              targetAccountId: toId,
+              amount,
+              category: 'Transfer',
+              subcategory: 'Account Transfer',
+              description: customDesc || `Transfer: ${fromAcc.name} ➔ ${toAcc?.name}`,
+              date,
+              paymentMethod: 'Bank Transfer'
+            });
+
+            modalRoot.innerHTML = '';
+            await this.refreshCurrentView();
+            this.showToast(`Transferred ${AccountModel.formatCurrency(amount)} successfully!`);
+
+          } else if (currentMode === 'external_bank') {
+            const externalBeneficiary = fd.get('externalBeneficiary') || 'External Bank';
+
+            await this.storage.addTransaction({
+              type: 'expense',
+              accountId: fromId,
+              amount,
+              category: 'Transfer',
+              subcategory: 'External Transfer',
+              description: customDesc || `Sent to: ${externalBeneficiary} (via ${fromAcc.name})`,
+              date,
+              paymentMethod: 'UPI / Net Banking'
+            });
+
+            modalRoot.innerHTML = '';
+            await this.refreshCurrentView();
+            this.showToast(`Transferred ${AccountModel.formatCurrency(amount)} to ${externalBeneficiary} successfully!`);
           }
-
-          await this.storage.addTransaction({
-            type: 'credit_card_payment',
-            accountId: fromId,
-            targetAccountId: toId,
-            amount,
-            category: 'Bills & Utilities',
-            subcategory: 'Credit Card Bill',
-            description: customDesc || `Card Bill Payment: ${fromAcc.name} ➔ ${cardAcc.name}`,
-            date,
-            paymentMethod: 'Net Banking'
-          });
-
-          modalRoot.innerHTML = '';
-          await this.refreshCurrentView();
-          this.showToast(`Paid ${AccountModel.formatCurrency(amount)} towards ${cardAcc.name} successfully!`);
-
-        } else if (currentMode === 'bank_to_bank') {
-          const toId = fd.get('toAccountId');
-          if (fromId === toId) {
-            alert('Source and destination accounts must be different.');
-            return;
-          }
-          const toAcc = accounts.find(a => a.id === toId);
-
-          await this.storage.addTransaction({
-            type: 'transfer',
-            accountId: fromId,
-            targetAccountId: toId,
-            amount,
-            category: 'Transfer',
-            subcategory: 'Account Transfer',
-            description: customDesc || `Transfer: ${fromAcc.name} ➔ ${toAcc?.name}`,
-            date,
-            paymentMethod: 'Bank Transfer'
-          });
-
-          modalRoot.innerHTML = '';
-          await this.refreshCurrentView();
-          this.showToast(`Transferred ${AccountModel.formatCurrency(amount)} successfully!`);
-
-        } else if (currentMode === 'external_bank') {
-          const externalBeneficiary = fd.get('externalBeneficiary') || 'External Bank';
-
-          await this.storage.addTransaction({
-            type: 'expense',
-            accountId: fromId,
-            amount,
-            category: 'Transfer',
-            subcategory: 'External Transfer',
-            description: customDesc || `Sent to: ${externalBeneficiary} (via ${fromAcc.name})`,
-            date,
-            paymentMethod: 'UPI / Net Banking'
-          });
-
-          modalRoot.innerHTML = '';
-          await this.refreshCurrentView();
-          this.showToast(`Transferred ${AccountModel.formatCurrency(amount)} to ${externalBeneficiary} successfully!`);
+        } catch (err) {
+          isSubmittingTransfer = false;
+          if (submitBtn) submitBtn.disabled = false;
+          alert(err.message || 'Transfer failed.');
         }
       });
     };

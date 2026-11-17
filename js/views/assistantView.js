@@ -39,14 +39,7 @@ export class AssistantView {
 
   render(rootContainer) {
     rootContainer.innerHTML = `
-      <!-- Floating AI Assistant Action Button (FAB) -->
-      <button class="ai-fab" id="ai-fab-toggle" title="Open AI Financial Assistant">
-        <div class="ai-fab-glow"></div>
-        <span class="ai-fab-icon">✨</span>
-        <span class="ai-fab-badge">AI</span>
-      </button>
-
-      <!-- Slide-Up AI Assistant Drawer -->
+      <!-- Slide-Up AI Assistant Drawer (opened via single top header AI button) -->
       <div class="ai-drawer-backdrop" id="ai-drawer-backdrop">
         <div class="ai-drawer-card slide-up" id="ai-drawer-card">
           <!-- Drawer Header -->
@@ -54,13 +47,13 @@ export class AssistantView {
             <div class="ai-header-brand">
               <div class="ai-avatar-circle" style="background: linear-gradient(135deg, #facc15, #eab308); color: #08080a;">✨</div>
               <div>
-                <h3 class="font-bold">Track-Money AI Co-Pilot</h3>
-                <span class="text-xs text-muted" id="ai-voice-status">Powered by Google Gemini 3.5 Flash • Real-Time Finance Advisor</span>
+                <h3 class="font-bold">AI Assistant</h3>
+                <span class="text-xs text-muted" id="ai-voice-status">Live Financial Insights & Actions</span>
               </div>
             </div>
             <div class="ai-header-actions" style="display: flex; align-items: center; gap: 8px;">
-              <button class="btn btn-outline btn-xs" id="btn-voice-speed-pill" title="Toggle AI voice speed">
-                ⚡ ${this.speech.getSpeedRate()}x Speed
+              <button class="btn btn-outline btn-xs" id="btn-voice-speed-pill" title="Voice Speed">
+                ⚡ ${this.speech.getSpeedRate()}x
               </button>
               <button class="btn btn-icon" id="ai-drawer-close">✕</button>
             </div>
@@ -68,15 +61,13 @@ export class AssistantView {
 
           <!-- Suggested Prompts Strip -->
           <div class="ai-suggestions-carousel">
-            <span class="text-xs text-muted" style="margin-right: 6px; align-self: center;">Try:</span>
-            <button class="ai-chip" data-prompt="Where did I spend the most this month?">"Where did I spend most?"</button>
-            <button class="ai-chip" data-prompt="Analyze my spending and suggest what I need to improve">"How can I save more?"</button>
-            <button class="ai-chip" data-prompt="Create category Fitness with red tag">"Create category Fitness"</button>
-            <button class="ai-chip" data-prompt="Show all my transactions for this month">"Say all transactions"</button>
-            <button class="ai-chip" data-prompt="Transfer ₹5,000 from HDFC Bank to ICICI Credit Card">"Transfer 5k to Credit Card"</button>
-            <button class="ai-chip" data-prompt="What is my total Net Position, Assets, and Debts?">"Net Position & Debt"</button>
-            <button class="ai-chip" data-prompt="Spent ₹450 for lunch today from HDFC">"Spent 450 lunch HDFC"</button>
-            <button class="ai-chip" data-prompt="Add 30,000 salary income to Savings">"Add 30k salary"</button>
+            <button class="ai-chip" data-prompt="Give me an overall financial summary">Financial Summary</button>
+            <button class="ai-chip" data-prompt="How can I save more?">Savings Tips</button>
+            <button class="ai-chip" data-prompt="Check for unusual spending">Unusual Spending</button>
+            <button class="ai-chip" data-prompt="Show my spending trends">Spending Trends</button>
+            <button class="ai-chip" data-prompt="Where did I spend the most this month?">Top Expenses</button>
+            <button class="ai-chip" data-prompt="Analyze my income">Income Insights</button>
+            <button class="ai-chip" data-prompt="What is my net worth and credit card debt?">Net Worth & Debt</button>
           </div>
 
           <!-- Chat Conversation Log -->
@@ -91,7 +82,7 @@ export class AssistantView {
             <div class="wave-bar"></div>
             <div class="wave-bar"></div>
             <div class="wave-bar"></div>
-            <span class="text-xs text-muted" style="margin-left: 8px;">Listening to your voice...</span>
+            <span class="text-xs text-muted" style="margin-left: 8px;">Listening...</span>
           </div>
 
           <!-- Input Bar -->
@@ -100,7 +91,7 @@ export class AssistantView {
               🎙️
             </button>
             <input type="text" id="ai-chat-input" class="form-input ai-input" 
-                   placeholder="Type or speak: 'Spent 450 for lunch'..." autocomplete="off">
+                   placeholder="Ask about spending, savings, trends, or log a transaction..." autocomplete="off">
             <button class="btn btn-primary btn-sm" id="btn-ai-send">
               Send
             </button>
@@ -121,32 +112,19 @@ export class AssistantView {
       <div class="chat-msg msg-ai fade-in">
         <div class="msg-avatar">✨</div>
         <div class="msg-bubble">
-          <p>Hello! I am your <strong>Track-Money AI Assistant</strong>.</p>
-          <p class="text-sm" style="margin-top: 4px;">
-            You can type or speak financial commands naturally. For example:
-          </p>
-          <ul class="text-xs" style="margin-top: 4px; padding-left: 1.2rem; color: #94a3b8;">
-            <li><em>"Create account Bank Saving Account 6599"</em></li>
-            <li><em>"Add credit card ICICI Coral limit 50,000"</em></li>
-            <li><em>"I spent ₹500 for lunch from HDFC bank"</em></li>
-            <li><em>"Paid 5,000 towards my HDFC credit card"</em></li>
-            <li><em>"Transfer 10,000 from HDFC to SBI"</em></li>
-            <li><em>"How much did I spend on food this month?"</em></li>
-          </ul>
+          <p><strong>Track-Money AI</strong> — Ask about your balances, spending trends, unusual expenses, or savings ideas.</p>
         </div>
       </div>
     `;
   }
 
   attachEvents() {
-    const fab = document.getElementById('ai-fab-toggle');
     const drawerBackdrop = document.getElementById('ai-drawer-backdrop');
     const drawerClose = document.getElementById('ai-drawer-close');
     const sendBtn = document.getElementById('btn-ai-send');
     const inputEl = document.getElementById('ai-chat-input');
     const micBtn = document.getElementById('btn-voice-mic');
 
-    fab?.addEventListener('click', () => this.open());
     drawerClose?.addEventListener('click', () => this.close());
     drawerBackdrop?.addEventListener('click', (e) => {
       if (e.target.id === 'ai-drawer-backdrop') this.close();

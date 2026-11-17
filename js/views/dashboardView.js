@@ -11,7 +11,9 @@ export class DashboardView {
   async render(container) {
     const metrics = await this.storage.getDashboardMetrics();
     const isNegativeNet = metrics.netPosition < 0;
-    const currentMonthYear = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
+    const now = new Date();
+    const currentMonthYear = now.toLocaleString('default', { month: 'long', year: 'numeric' });
+    const currentMonthName = now.toLocaleString('default', { month: 'long' });
 
     container.innerHTML = `
       <div class="dashboard-container fade-in">
@@ -21,12 +23,12 @@ export class DashboardView {
             <div style="display: flex; align-items: center; gap: 10px;">
               <span style="font-size: 1.6rem;">📲</span>
               <div>
-                <div class="font-bold text-sm">Install as Progressive Hybrid App</div>
-                <div class="text-xs text-muted">Install directly to your mobile home screen with offline local storage!</div>
+                <div class="font-bold text-sm">Install App</div>
+                <div class="text-xs text-muted">Offline local storage</div>
               </div>
             </div>
             <button class="btn btn-primary btn-xs" id="dash-btn-install-banner">
-              ⚡ Install App
+              ⚡ Install
             </button>
           </div>
         ` : ''}
@@ -65,9 +67,6 @@ export class DashboardView {
           </button>
           <button class="btn btn-secondary btn-sm" id="dash-btn-transfer">
             <span>⇄ Transfer & Pay</span>
-          </button>
-          <button class="btn btn-ai-sparkle btn-sm" id="dash-btn-voice-ai">
-            <span>✨ AI Co-Pilot</span>
           </button>
         </div>
 
@@ -109,7 +108,7 @@ export class DashboardView {
               ${AccountModel.formatCurrency(metrics.savingsThisMonth)}
             </div>
             <div class="stat-trend">
-              <span class="pill pill-success">${metrics.savingsRate}% saved</span>
+              <span class="pill ${metrics.savingsThisMonth >= 0 ? 'pill-success' : 'pill-danger'}">${metrics.savingsRate}% saved</span>
             </div>
           </div>
         </div>
@@ -214,7 +213,7 @@ export class DashboardView {
           <div class="card chart-card">
             <div class="card-header">
               <h4>Spending by Category</h4>
-              <span class="text-xs text-muted">September</span>
+              <span class="text-xs text-muted">${currentMonthName}</span>
             </div>
             <div class="chart-container" id="category-chart-container">
               ${this.renderCategoryChart(metrics.categorySpending)}
@@ -402,10 +401,6 @@ export class DashboardView {
 
     container.querySelector('#dash-btn-add-account-empty')?.addEventListener('click', () => {
       this.app.openAddAccountModal();
-    });
-
-    container.querySelector('#dash-btn-voice-ai')?.addEventListener('click', () => {
-      this.app.openAiAssistant();
     });
 
     container.querySelector('#nav-to-assets')?.addEventListener('click', () => {

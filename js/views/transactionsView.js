@@ -72,8 +72,8 @@ export class TransactionsView {
                   <option value="all" ${this.filters.datePreset === 'all' ? 'selected' : ''}>All Time</option>
                   <option value="today" ${this.filters.datePreset === 'today' ? 'selected' : ''}>Today</option>
                   <option value="yesterday" ${this.filters.datePreset === 'yesterday' ? 'selected' : ''}>Yesterday</option>
-                  <option value="this_month" ${this.filters.datePreset === 'this_month' ? 'selected' : ''}>This Month (Sep 2026)</option>
-                  <option value="last_month" ${this.filters.datePreset === 'last_month' ? 'selected' : ''}>Last Month (Aug 2026)</option>
+                  <option value="this_month" ${this.filters.datePreset === 'this_month' ? 'selected' : ''}>This Month (${new Date().toLocaleString('default', { month: 'short', year: 'numeric' })})</option>
+                  <option value="last_month" ${this.filters.datePreset === 'last_month' ? 'selected' : ''}>Last Month (${new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).toLocaleString('default', { month: 'short', year: 'numeric' })})</option>
                   <option value="custom" ${this.filters.datePreset === 'custom' ? 'selected' : ''}>Custom Dates</option>
                 </select>
               </div>
@@ -219,15 +219,19 @@ export class TransactionsView {
       this.filters.endDate = d;
     } else if (preset === 'this_month') {
       const year = today.getFullYear();
-      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const monthIdx = today.getMonth();
+      const month = String(monthIdx + 1).padStart(2, '0');
+      const lastDay = String(new Date(year, monthIdx + 1, 0).getDate()).padStart(2, '0');
       this.filters.startDate = `${year}-${month}-01`;
-      this.filters.endDate = `${year}-${month}-31`;
+      this.filters.endDate = `${year}-${month}-${lastDay}`;
     } else if (preset === 'last_month') {
       const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
       const year = lastMonth.getFullYear();
-      const month = String(lastMonth.getMonth() + 1).padStart(2, '0');
+      const monthIdx = lastMonth.getMonth();
+      const month = String(monthIdx + 1).padStart(2, '0');
+      const lastDay = String(new Date(year, monthIdx + 1, 0).getDate()).padStart(2, '0');
       this.filters.startDate = `${year}-${month}-01`;
-      this.filters.endDate = `${year}-${month}-31`;
+      this.filters.endDate = `${year}-${month}-${lastDay}`;
     } else if (preset === 'all') {
       this.filters.startDate = '';
       this.filters.endDate = '';
@@ -328,8 +332,9 @@ export class TransactionsView {
         e.stopPropagation();
         const id = e.currentTarget.dataset.id;
         if (confirm('Delete this transaction? Balances will automatically update.')) {
-          await this.storage.delete('transactions', id);
-          this.render(container);
+          await this.storage.deleteTransaction(id);
+          await this.render(container);
+          this.app.updateHeaderSummary();
           this.app.showToast('Transaction deleted and balances updated.');
         }
       });
