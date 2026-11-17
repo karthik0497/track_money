@@ -1,6 +1,5 @@
-// Track-Money: Crisp Monthly Reports & Category Breakdown View
+// Track-Money: Simple Monthly Reports — Pie Chart & Full Category List
 import { AccountModel } from '../models/account.js';
-import { TransactionModel } from '../models/transaction.js';
 
 export class ReportsView {
   constructor(storage, app) {
@@ -10,8 +9,6 @@ export class ReportsView {
     const now = new Date();
     this.selectedYear = now.getFullYear();
     this.selectedMonth = now.getMonth();
-    this.selectedCategory = null;
-    this.showAllTransactions = false;
   }
 
   async render(container) {
@@ -48,25 +45,11 @@ export class ReportsView {
 
     const totalExpense = report.expense;
     const catList = report.categoryBreakdown;
-
-    // Reset selected category if it no longer exists in this period
-    if (this.selectedCategory && !catList.some(c => c.name === this.selectedCategory)) {
-      this.selectedCategory = null;
-    }
-
     const chartSvgHtml = this.generateDonutChartSvg(catList, totalExpense, report.monthName);
-
-    const filteredTransactions = this.selectedCategory
-      ? report.transactions.filter(t => t.type === 'expense' && (t.category || 'Other Expense') === this.selectedCategory)
-      : report.transactions;
-
-    const visibleTransactions = this.showAllTransactions
-      ? filteredTransactions
-      : filteredTransactions.slice(0, 15);
 
     container.innerHTML = `
       <div class="reports-container fade-in">
-        <!-- Compact Period Selector Bar -->
+        <!-- Period Selector -->
         <div class="report-period-bar" style="margin-bottom: 1rem;">
           <div class="report-period-selectors">
             <button class="btn btn-outline btn-xs" id="btn-prev-month" title="Previous Month">◀</button>
@@ -88,7 +71,7 @@ export class ReportsView {
           </div>
         </div>
 
-        <!-- Crisp 4-Metric Cashflow Strip -->
+        <!-- 4 Summary Metrics -->
         <div class="report-stats-grid" style="margin-bottom: 1rem;">
           <div class="report-stat-card">
             <span class="text-xs text-muted">INCOME</span>
@@ -108,8 +91,8 @@ export class ReportsView {
           </div>
         </div>
 
-        <!-- Interactive Pie Chart & Category Breakdown (No Inner Scrollbar) -->
-        <div class="pie-chart-card" style="margin-bottom: 1rem;">
+        <!-- Simple Pie Chart & Full Category List -->
+        <div class="pie-chart-card">
           <div class="card-header" style="padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
             <h4 style="margin: 0;">${report.monthName} ${report.year}</h4>
             <span class="badge ${totalExpense > 0 ? 'badge-primary' : 'badge-subtle'}">
@@ -127,84 +110,22 @@ export class ReportsView {
                 <div class="empty-placeholder" style="padding: 1rem; text-align: center;">
                   No expenses in ${report.monthName} ${report.year}.
                 </div>
-              ` : catList.map(cat => {
-                const isSelected = this.selectedCategory === cat.name;
-                return `
-                  <div class="legend-item ${isSelected ? 'active' : ''}" data-category="${this.escapeHtml(cat.name)}"
-                       style="cursor: pointer; ${isSelected ? `border-color: ${cat.color}; background: ${cat.color}18;` : ''}">
-                    <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
-                      <div class="legend-dot" style="background: ${cat.color};"></div>
-                      <span>${cat.icon}</span>
-                      <strong class="text-sm" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${this.escapeHtml(cat.name)}</strong>
-                      <span class="text-xs text-muted">(${cat.count})</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
-                      <span class="font-bold text-danger text-sm">${AccountModel.formatCurrency(cat.amount)}</span>
-                      <span class="badge badge-subtle text-xs" style="min-width: 44px; text-align: center;">${cat.percentage}%</span>
-                    </div>
+              ` : catList.map(cat => `
+                <div class="legend-item" data-category="${this.escapeHtml(cat.name)}">
+                  <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                    <div class="legend-dot" style="background: ${cat.color};"></div>
+                    <span>${cat.icon}</span>
+                    <strong class="text-sm" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${this.escapeHtml(cat.name)}</strong>
+                    <span class="text-xs text-muted">(${cat.count})</span>
                   </div>
-                `;
-              }).join('')}
+                  <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+                    <span class="font-bold text-danger text-sm">${AccountModel.formatCurrency(cat.amount)}</span>
+                    <span class="badge badge-subtle text-xs" style="min-width: 44px; text-align: center;">${cat.percentage}%</span>
+                  </div>
+                </div>
+              `).join('')}
             </div>
           </div>
-        </div>
-
-        <!-- Crisp Month Transactions List -->
-        <div class="card">
-          <div class="card-header">
-            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-              <h4 style="margin: 0;">Transactions (${filteredTransactions.length})</h4>
-              ${this.selectedCategory ? `
-                <button class="badge badge-primary text-xs" id="btn-clear-cat-filter" style="border: none; cursor: pointer;">
-                  ${this.escapeHtml(this.selectedCategory)} ✕
-                </button>
-              ` : ''}
-            </div>
-            <button class="btn btn-text text-xs" id="btn-view-all-history">All History →</button>
-          </div>
-
-          ${visibleTransactions.length === 0 ? `
-            <div class="empty-placeholder" style="padding: 1.25rem; text-align: center;">
-              No transactions found for ${report.monthName} ${report.year}.
-            </div>
-          ` : `
-            <div class="transaction-list">
-              ${visibleTransactions.map(tx => {
-                const amtFormatted = TransactionModel.formatAmount(tx.amount, tx.type);
-                return `
-                  <div class="tx-item">
-                    <div class="tx-icon-col">
-                      <div class="tx-icon-circle ${tx.type}">
-                        ${tx.type === 'income' ? '↗' : (tx.type === 'transfer' ? '⇄' : (tx.type === 'credit_card_payment' ? '💳' : '↘'))}
-                      </div>
-                    </div>
-                    <div class="tx-details-col">
-                      <div class="tx-title font-bold">${this.escapeHtml(tx.description || tx.category)}</div>
-                      <div class="tx-sub text-xs text-muted">
-                        <span>${this.escapeHtml(tx.accountName)}${tx.targetAccountName ? ' ➔ ' + this.escapeHtml(tx.targetAccountName) : ''}</span>
-                        <span>•</span>
-                        <span>${this.escapeHtml(tx.category)}</span>
-                        <span>•</span>
-                        <span>${TransactionModel.formatDate(tx.date)}</span>
-                      </div>
-                    </div>
-                    <div class="tx-amount-col">
-                      <div class="tx-amount font-bold ${amtFormatted.class}">${amtFormatted.text}</div>
-                      <button class="btn-item-action edit-tx-btn" data-id="${tx.id}" title="Edit">✏️</button>
-                    </div>
-                  </div>
-                `;
-              }).join('')}
-            </div>
-
-            ${filteredTransactions.length > 15 ? `
-              <div style="text-align: center; margin-top: 0.75rem;">
-                <button class="btn btn-outline btn-xs" id="btn-toggle-all-tx">
-                  ${this.showAllTransactions ? 'Show Less' : `Show All (${filteredTransactions.length})`}
-                </button>
-              </div>
-            ` : ''}
-          `}
         </div>
       </div>
     `;
@@ -269,15 +190,11 @@ export class ReportsView {
   attachEvents(container, report) {
     container.querySelector('#select-report-month')?.addEventListener('change', (e) => {
       this.selectedMonth = parseInt(e.target.value, 10);
-      this.selectedCategory = null;
-      this.showAllTransactions = false;
       this.render(container);
     });
 
     container.querySelector('#select-report-year')?.addEventListener('change', (e) => {
       this.selectedYear = parseInt(e.target.value, 10);
-      this.selectedCategory = null;
-      this.showAllTransactions = false;
       this.render(container);
     });
 
@@ -288,8 +205,6 @@ export class ReportsView {
       } else {
         this.selectedMonth -= 1;
       }
-      this.selectedCategory = null;
-      this.showAllTransactions = false;
       this.render(container);
     });
 
@@ -300,8 +215,6 @@ export class ReportsView {
       } else {
         this.selectedMonth += 1;
       }
-      this.selectedCategory = null;
-      this.showAllTransactions = false;
       this.render(container);
     });
 
@@ -309,12 +222,9 @@ export class ReportsView {
       const now = new Date();
       this.selectedYear = now.getFullYear();
       this.selectedMonth = now.getMonth();
-      this.selectedCategory = null;
-      this.showAllTransactions = false;
       this.render(container);
     });
 
-    // Hover highlights donut center; tap/click filters transactions by category
     const pieCenterAmount = container.querySelector('#pie-center-amount');
     const pieCenterLabel = container.querySelector('#pie-center-label');
     const originalAmount = AccountModel.formatCurrency(report.expense);
@@ -336,30 +246,11 @@ export class ReportsView {
       });
       el.addEventListener('click', (e) => {
         const cat = e.currentTarget.dataset.category;
-        this.selectedCategory = this.selectedCategory === cat ? null : cat;
-        this.showAllTransactions = false;
-        this.render(container);
-      });
-    });
-
-    container.querySelector('#btn-clear-cat-filter')?.addEventListener('click', () => {
-      this.selectedCategory = null;
-      this.render(container);
-    });
-
-    container.querySelector('#btn-toggle-all-tx')?.addEventListener('click', () => {
-      this.showAllTransactions = !this.showAllTransactions;
-      this.render(container);
-    });
-
-    container.querySelector('#btn-view-all-history')?.addEventListener('click', () => {
-      this.app.navigateTo('transactions');
-    });
-
-    container.querySelectorAll('.edit-tx-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.app.openTransactionModal({ editTxId: e.currentTarget.dataset.id });
+        const matched = report.categoryBreakdown.find(c => c.name === cat);
+        if (matched && pieCenterAmount && pieCenterLabel) {
+          pieCenterAmount.textContent = AccountModel.formatCurrency(matched.amount);
+          pieCenterLabel.textContent = `${matched.name} (${matched.percentage}%)`;
+        }
       });
     });
   }

@@ -1226,14 +1226,14 @@
   .pie-legend-grid {
     width: 100% !important;
     min-width: 0 !important;
-    max-height: 250px !important;
-    -webkit-overflow-scrolling: touch;
+    max-height: none !important;
+    overflow: visible !important;
   }
 
   .legend-item {
-    min-height: 42px;
+    min-height: 40px;
     padding: 8px 10px;
-    font-size: 0.8rem;
+    font-size: 0.82rem;
   }
 
   .report-table-wrapper {
