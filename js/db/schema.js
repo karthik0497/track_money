@@ -57,14 +57,14 @@ export const DEFAULT_CATEGORIES = [
     name: 'Water Bill',
     type: 'expense',
     icon: '💧',
-    color: '#0284c7',
+    color: '#06b6d4',
     subcategories: ['Monthly Water Bill', 'Water Tanker', 'Drinking Water Cans', 'Plumbing Maintenance']
   },
   {
     name: 'Current Bill',
     type: 'expense',
     icon: '⚡',
-    color: '#eab308',
+    color: '#84cc16',
     subcategories: ['Monthly Current Bill', 'Meter Charges', 'Inverter / Power Backup', 'Electricity Deposit']
   },
   {
@@ -78,7 +78,7 @@ export const DEFAULT_CATEGORIES = [
     name: 'Car EMI',
     type: 'expense',
     icon: '🚘',
-    color: '#ec4899',
+    color: '#14b8a6',
     subcategories: ['Monthly Car Loan EMI', 'Loan Prepayment', 'Down Payment', 'Processing & Finance Fees']
   },
 
@@ -101,14 +101,14 @@ export const DEFAULT_CATEGORIES = [
     name: 'Transportation',
     type: 'expense',
     icon: '🚗',
-    color: '#3b82f6',
+    color: '#0ea5e9',
     subcategories: ['Fuel', 'Taxi / Uber', 'Metro / Bus', 'Vehicle Service', 'Parking']
   },
   {
     name: 'Housing & Rent',
     type: 'expense',
     icon: '🏠',
-    color: '#8b5cf6',
+    color: '#6366f1',
     subcategories: ['House Rent', 'Maintenance', 'Repairs', 'Furniture']
   },
   {

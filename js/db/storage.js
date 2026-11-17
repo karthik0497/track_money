@@ -1236,22 +1236,74 @@ export class StorageEngine {
       ? Number(((netSavings / monthlyIncome) * 100).toFixed(1))
       : 0;
 
-    // Build Category Breakdown with percentage and color tokens
-    const categoryBreakdown = Object.entries(categoryTotals)
-      .map(([name, amount]) => {
-        const catInfo = catMap.get(name.toLowerCase());
-        const pct = monthlyExpense > 0 ? Number(((amount / monthlyExpense) * 100).toFixed(1)) : 0;
-        return {
-          name,
-          amount: round2(amount),
-          percentage: pct,
-          count: categoryTxList[name]?.length || 0,
-          icon: catInfo?.icon || '🏷️',
-          color: catInfo?.color || '#6366f1',
-          transactions: categoryTxList[name] || []
-        };
-      })
-      .sort((a, b) => b.amount - a.amount);
+    // Curated high-contrast palette so no two pie chart categories ever share the same or near-identical color
+    const DISTINCT_CHART_PALETTE = [
+      '#14b8a6', '#3b82f6', '#ec4899', '#f59e0b', '#8b5cf6',
+      '#ef4444', '#84cc16', '#06b6d4', '#f97316', '#6366f1',
+      '#eab308', '#d946ef', '#10b981', '#0ea5e9', '#e11d48',
+      '#a855f7', '#22c55e', '#fb7185', '#2dd4bf', '#94a3b8'
+    ];
+
+    const hexToRgb = (hex) => {
+      const m = String(hex || '').trim().match(/^#?([0-9a-f]{6})$/i);
+      if (!m) return null;
+      const n = parseInt(m[1], 16);
+      return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    };
+
+    const isTooClose = (hex, usedHexes) => {
+      const rgb = hexToRgb(hex);
+      if (!rgb) return true;
+      for (const u of usedHexes) {
+        if (u === hex.toLowerCase()) return true;
+        const uRgb = hexToRgb(u);
+        if (!uRgb) continue;
+        const dist = Math.hypot(rgb[0] - uRgb[0], rgb[1] - uRgb[1], rgb[2] - uRgb[2]);
+        if (dist < 60) return true;
+      }
+      return false;
+    };
+
+    const usedColors = [];
+    const pickUniqueColor = (preferredHex, idx) => {
+      const pref = (preferredHex || '').trim().toLowerCase();
+      if (pref && hexToRgb(pref) && !isTooClose(pref, usedColors)) {
+        usedColors.push(pref);
+        return pref;
+      }
+      for (const cand of DISTINCT_CHART_PALETTE) {
+        if (!isTooClose(cand, usedColors)) {
+          usedColors.push(cand.toLowerCase());
+          return cand;
+        }
+      }
+      for (const cand of DISTINCT_CHART_PALETTE) {
+        if (!usedColors.includes(cand.toLowerCase())) {
+          usedColors.push(cand.toLowerCase());
+          return cand;
+        }
+      }
+      const fallback = `hsl(${(idx * 137.508) % 360}, 75%, 55%)`;
+      usedColors.push(fallback);
+      return fallback;
+    };
+
+    // Build Category Breakdown sorted by highest spend first, with guaranteed unique colors
+    const sortedEntries = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]);
+    const categoryBreakdown = sortedEntries.map(([name, amount], idx) => {
+      const catInfo = catMap.get(name.toLowerCase());
+      const pct = monthlyExpense > 0 ? Number(((amount / monthlyExpense) * 100).toFixed(1)) : 0;
+      const uniqueColor = pickUniqueColor(catInfo?.color, idx);
+      return {
+        name,
+        amount: round2(amount),
+        percentage: pct,
+        count: categoryTxList[name]?.length || 0,
+        icon: catInfo?.icon || '🏷️',
+        color: uniqueColor,
+        transactions: categoryTxList[name] || []
+      };
+    });
 
     monthTransactions.sort((a, b) => {
       const diff = TransactionModel.parseLocalDate(b.date || b.createdTimestamp) - TransactionModel.parseLocalDate(a.date || a.createdTimestamp);

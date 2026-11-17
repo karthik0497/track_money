@@ -65,7 +65,11 @@
 /* AI Slide-Up Drawer */
 .ai-drawer-backdrop {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 100%;
   background: rgba(0, 0, 0, 0.75);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -76,6 +80,7 @@
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.25s ease;
+  overflow: hidden;
 }
 
 .ai-drawer-backdrop.open {
@@ -86,16 +91,23 @@
 .ai-drawer-card {
   width: 100%;
   max-width: 650px;
-  height: 80vh;
-  max-height: 700px;
+  height: 82%;
+  max-height: min(700px, 100%);
   background: #0c0c0f;
   border: 1px solid rgba(234, 179, 8, 0.25);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(234, 179, 8, 0.1);
   transform: translateY(100%);
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ai-drawer-backdrop.keyboard-open .ai-drawer-card {
+  height: 100% !important;
+  max-height: 100% !important;
+  border-radius: 0;
 }
 
 .ai-drawer-backdrop.open .ai-drawer-card {
@@ -104,10 +116,11 @@
 
 /* Drawer Header */
 .ai-drawer-header {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 1.25rem;
+  padding: 0.85rem 1.25rem;
   border-bottom: 1px solid rgba(234, 179, 8, 0.18);
   background: rgba(17, 17, 20, 0.95);
 }
@@ -133,6 +146,7 @@
 
 /* Suggestions Strip */
 .ai-suggestions-carousel {
+  flex-shrink: 0;
   display: flex;
   gap: 8px;
   padding: 8px 1.25rem;
@@ -166,8 +180,11 @@
 }
 /* Messages Chat Area */
 .ai-chat-messages {
-  flex: 1;
+  flex: 1 1 0;
+  min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 1rem 1.25rem;
   display: flex;
   flex-direction: column;
@@ -365,6 +382,7 @@
 
 /* AI Input Bar */
 .ai-input-bar {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   padding: 0.75rem 1.25rem;
@@ -425,15 +443,9 @@
 }
 
 @media (max-width: 600px) {
-  .ai-fab {
-    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
-    right: 16px;
-    width: 54px;
-    height: 54px;
-  }
   .ai-drawer-card {
-    max-height: 88vh;
-    max-height: 88dvh;
+    height: 85%;
+    max-height: 100%;
     width: 100%;
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;

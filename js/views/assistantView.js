@@ -184,20 +184,78 @@ export class AssistantView {
         this.handleSendMessage(prompt);
       });
     });
+
+    // Keep AI drawer visible above mobile virtual keyboard
+    this._syncViewportToDrawer = () => {
+      const backdrop = document.getElementById('ai-drawer-backdrop');
+      if (!backdrop) return;
+      const vv = window.visualViewport;
+      if (vv) {
+        const keyboardOpen = (window.innerHeight - vv.height) > 120;
+        backdrop.classList.toggle('keyboard-open', keyboardOpen);
+        backdrop.style.height = `${vv.height}px`;
+        backdrop.style.top = `${vv.offsetTop}px`;
+        backdrop.style.bottom = 'auto';
+      } else {
+        backdrop.classList.remove('keyboard-open');
+        backdrop.style.height = '';
+        backdrop.style.top = '';
+        backdrop.style.bottom = '';
+      }
+      const msgContainer = document.getElementById('ai-chat-messages');
+      if (msgContainer) {
+        msgContainer.scrollTop = msgContainer.scrollHeight;
+      }
+    };
+
+    if (window.visualViewport && !this._vvBound) {
+      this._vvBound = true;
+      window.visualViewport.addEventListener('resize', () => {
+        if (this.isOpen) this._syncViewportToDrawer();
+      });
+      window.visualViewport.addEventListener('scroll', () => {
+        if (this.isOpen) this._syncViewportToDrawer();
+      });
+    }
+
+    inputEl?.addEventListener('focus', () => {
+      setTimeout(() => {
+        if (this.isOpen && this._syncViewportToDrawer) this._syncViewportToDrawer();
+      }, 150);
+    });
+    inputEl?.addEventListener('blur', () => {
+      setTimeout(() => {
+        if (this.isOpen && this._syncViewportToDrawer) this._syncViewportToDrawer();
+      }, 100);
+    });
   }
 
   open() {
     this.isOpen = true;
     const drawer = document.getElementById('ai-drawer-backdrop');
-    if (drawer) drawer.classList.add('open');
-    document.getElementById('ai-chat-input')?.focus();
+    if (drawer) {
+      drawer.classList.add('open');
+      if (this._syncViewportToDrawer) this._syncViewportToDrawer();
+    }
+    // Only auto-focus input on desktop pointer devices so mobile keyboard doesn't cover chat on open
+    const isDesktopPointer = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    if (isDesktopPointer) {
+      document.getElementById('ai-chat-input')?.focus();
+    }
   }
 
   close() {
     this.isOpen = false;
     this.speech.stop();
+    const inputEl = document.getElementById('ai-chat-input');
+    if (inputEl) inputEl.blur();
     const drawer = document.getElementById('ai-drawer-backdrop');
-    if (drawer) drawer.classList.remove('open');
+    if (drawer) {
+      drawer.classList.remove('open', 'keyboard-open');
+      drawer.style.height = '';
+      drawer.style.top = '';
+      drawer.style.bottom = '';
+    }
   }
 
   updateVoiceStatus(statusText) {

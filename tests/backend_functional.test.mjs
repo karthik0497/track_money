@@ -278,13 +278,22 @@ test('3. Dashboard metrics & Monthly Reports exact accuracy and synchronization'
   assert.equal(novReport.transferTotal, 15000);
   assert.equal(novReport.creditCardPaymentTotal, 10767);
 
-  // Category totals sum to exact monthly expense
+  // Category totals sum to exact monthly expense & every slice has a distinct color
   const novCatSum = novReport.categoryBreakdown.reduce((s, c) => s + c.amount, 0);
   assert.equal(novCatSum, 37370);
   assert.equal(novReport.categoryBreakdown[0].name, 'Car EMI');
   assert.equal(novReport.categoryBreakdown[0].amount, 13105);
   assert.equal(novReport.categoryBreakdown[1].name, 'Car Expense');
   assert.equal(novReport.categoryBreakdown[1].amount, 10411);
+
+  const novColors = novReport.categoryBreakdown.map(c => c.color.toLowerCase());
+  assert.equal(new Set(novColors).size, novColors.length, 'Every November pie chart category must have a unique color');
+  const carEmiColor = novReport.categoryBreakdown.find(c => c.name === 'Car EMI').color.toLowerCase();
+  const shoppingColor = novReport.categoryBreakdown.find(c => c.name === 'Shopping').color.toLowerCase();
+  assert.notEqual(carEmiColor, shoppingColor, 'Car EMI and Shopping must NOT share the same pie chart color');
+
+  const octColors = octReport.categoryBreakdown.map(c => c.color.toLowerCase());
+  assert.equal(new Set(octColors).size, octColors.length, 'Every October pie chart category must have a unique color');
 
   // October Monthly Report
   assert.equal(octReport.income, 59375);

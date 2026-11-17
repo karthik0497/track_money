@@ -326,7 +326,12 @@ export class DashboardView {
     }
 
     const total = entries.reduce((sum, [, val]) => sum + val, 0);
-    const colors = ['#f59e0b', '#ec4899', '#3b82f6', '#8b5cf6', '#06b6d4', '#10b981', '#f43f5e', '#a855f7', '#64748b'];
+    const colors = [
+      '#14b8a6', '#3b82f6', '#ec4899', '#f59e0b', '#8b5cf6',
+      '#ef4444', '#84cc16', '#06b6d4', '#f97316', '#6366f1',
+      '#eab308', '#d946ef', '#10b981', '#0ea5e9', '#e11d48',
+      '#a855f7', '#22c55e', '#fb7185', '#2dd4bf', '#94a3b8'
+    ];
 
     // Render interactive SVG donut chart + legend
     let cumulativeAngle = 0;
