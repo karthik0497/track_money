@@ -1351,11 +1351,9 @@
 .pie-legend-grid {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   flex: 1;
-  min-width: 240px;
-  max-height: 280px;
-  overflow-y: auto;
+  min-width: 220px;
 }
 
 .legend-item {
@@ -1363,11 +1361,11 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 6px 10px;
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   transition: background 0.15s ease;
 }
 

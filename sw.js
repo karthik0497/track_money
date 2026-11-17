@@ -1,5 +1,5 @@
 // Track-Money Service Worker for 100% Offline Capability & Hybrid App PWA
-const CACHE_NAME = 'track-money-v8';
+const CACHE_NAME = 'track-money-v9';
 
 const ASSETS = [
   './',
