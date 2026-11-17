@@ -309,6 +309,15 @@ test('3. Dashboard metrics & Monthly Reports exact accuracy and synchronization'
   assert.equal(metrics.upcomingPayments.length, 2);
   const dueNames = metrics.upcomingPayments.map(p => p.accountName).sort();
   assert.deepEqual(dueNames, ['Amazon Pay Later', 'HDFC']);
+
+  // Custom Date Range Report (cross-month 2026-10-25 to 2026-11-10)
+  const rangeReport = await storage.getRangeReport('2026-10-25', '2026-11-10');
+  assert.ok(rangeReport.txCount > 0, 'Custom date range report should include transactions');
+  assert.equal(rangeReport.savings, Math.round((rangeReport.income - rangeReport.expense) * 100) / 100);
+  const rangeCatSum = Math.round(rangeReport.categoryBreakdown.reduce((s, c) => s + c.amount, 0) * 100) / 100;
+  assert.equal(rangeCatSum, rangeReport.expense, 'Range category totals must equal total range expense');
+  const rangeColors = rangeReport.categoryBreakdown.map(c => c.color.toLowerCase());
+  assert.equal(new Set(rangeColors).size, rangeColors.length, 'Range report pie chart categories must have unique colors');
 });
 
 // ============================================================================

@@ -1174,66 +1174,48 @@ export class StorageEngine {
     return true;
   }
 
-  // Monthly Financial Analytics & Categorical Aggregations
-  async getMonthlyReport(year, month) {
-    if (!this.db) await this.readyPromise;
-    const [transactions, categories, accounts] = await Promise.all([
-      this.getAll(STORES.TRANSACTIONS),
-      this.getAll(STORES.CATEGORIES),
-      this.getAll(STORES.ACCOUNTS)
-    ]);
-
+  // Shared Report Builder (used by both Monthly and Custom Date-Range reports)
+  _buildReport(filteredTxs, categories, accounts, meta = {}) {
     const catMap = new Map(categories.map(c => [(c.name || '').toLowerCase(), c]));
     const accMap = new Map(accounts.map(a => [a.id, a]));
 
-    const monthNames = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-
-    let monthlyIncome = 0;
-    let monthlyExpense = 0;
+    let totalIncome = 0;
+    let totalExpense = 0;
     let transferCount = 0;
     let transferTotal = 0;
     let creditCardPaymentTotal = 0;
     const categoryTotals = {};
     const categoryTxList = {};
-    const monthTransactions = [];
+    const enrichedTransactions = [];
 
-    transactions.forEach(tx => {
-      const txDate = TransactionModel.parseLocalDate(tx.date || tx.createdTimestamp);
-      const txYear = txDate.getFullYear();
-      const txMonth = txDate.getMonth();
+    filteredTxs.forEach(tx => {
+      const enrichedTx = {
+        ...tx,
+        accountName: accMap.get(tx.accountId)?.name || 'Unknown Account',
+        targetAccountName: tx.targetAccountId ? accMap.get(tx.targetAccountId)?.name : null
+      };
+      enrichedTransactions.push(enrichedTx);
 
-      if (txYear === year && txMonth === month) {
-        const enrichedTx = {
-          ...tx,
-          accountName: accMap.get(tx.accountId)?.name || 'Unknown Account',
-          targetAccountName: tx.targetAccountId ? accMap.get(tx.targetAccountId)?.name : null
-        };
-        monthTransactions.push(enrichedTx);
-
-        const amt = Number(tx.amount) || 0;
-        if (tx.type === 'income') {
-          monthlyIncome = round2(monthlyIncome + amt);
-        } else if (tx.type === 'expense' || tx.type === 'purchase') {
-          monthlyExpense = round2(monthlyExpense + amt);
-          const catName = tx.category || 'Other Expense';
-          categoryTotals[catName] = round2((categoryTotals[catName] || 0) + amt);
-          if (!categoryTxList[catName]) categoryTxList[catName] = [];
-          categoryTxList[catName].push(enrichedTx);
-        } else if (tx.type === 'transfer') {
-          transferCount++;
-          transferTotal = round2(transferTotal + amt);
-        } else if (tx.type === 'credit_card_payment') {
-          creditCardPaymentTotal = round2(creditCardPaymentTotal + amt);
-        }
+      const amt = Number(tx.amount) || 0;
+      if (tx.type === 'income') {
+        totalIncome = round2(totalIncome + amt);
+      } else if (tx.type === 'expense' || tx.type === 'purchase') {
+        totalExpense = round2(totalExpense + amt);
+        const catName = tx.category || 'Other Expense';
+        categoryTotals[catName] = round2((categoryTotals[catName] || 0) + amt);
+        if (!categoryTxList[catName]) categoryTxList[catName] = [];
+        categoryTxList[catName].push(enrichedTx);
+      } else if (tx.type === 'transfer') {
+        transferCount++;
+        transferTotal = round2(transferTotal + amt);
+      } else if (tx.type === 'credit_card_payment') {
+        creditCardPaymentTotal = round2(creditCardPaymentTotal + amt);
       }
     });
 
-    const netSavings = round2(monthlyIncome - monthlyExpense);
-    const savingsRate = monthlyIncome > 0
-      ? Number(((netSavings / monthlyIncome) * 100).toFixed(1))
+    const netSavings = round2(totalIncome - totalExpense);
+    const savingsRate = totalIncome > 0
+      ? Number(((netSavings / totalIncome) * 100).toFixed(1))
       : 0;
 
     // Curated high-contrast palette so no two pie chart categories ever share the same or near-identical color
@@ -1288,11 +1270,10 @@ export class StorageEngine {
       return fallback;
     };
 
-    // Build Category Breakdown sorted by highest spend first, with guaranteed unique colors
     const sortedEntries = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]);
     const categoryBreakdown = sortedEntries.map(([name, amount], idx) => {
       const catInfo = catMap.get(name.toLowerCase());
-      const pct = monthlyExpense > 0 ? Number(((amount / monthlyExpense) * 100).toFixed(1)) : 0;
+      const pct = totalExpense > 0 ? Number(((amount / totalExpense) * 100).toFixed(1)) : 0;
       const uniqueColor = pickUniqueColor(catInfo?.color, idx);
       return {
         name,
@@ -1305,26 +1286,76 @@ export class StorageEngine {
       };
     });
 
-    monthTransactions.sort((a, b) => {
+    enrichedTransactions.sort((a, b) => {
       const diff = TransactionModel.parseLocalDate(b.date || b.createdTimestamp) - TransactionModel.parseLocalDate(a.date || a.createdTimestamp);
       return diff !== 0 ? diff : (b.createdTimestamp || 0) - (a.createdTimestamp || 0);
     });
 
     return {
-      year,
-      month,
-      monthName: monthNames[month],
-      income: monthlyIncome,
-      expense: monthlyExpense,
+      ...meta,
+      income: totalIncome,
+      expense: totalExpense,
       savings: netSavings,
       savingsRate,
       categoryBreakdown,
-      transactions: monthTransactions,
-      txCount: monthTransactions.length,
+      transactions: enrichedTransactions,
+      txCount: enrichedTransactions.length,
       transferCount,
       transferTotal,
       creditCardPaymentTotal
     };
+  }
+
+  // Monthly Financial Analytics & Categorical Aggregations
+  async getMonthlyReport(year, month) {
+    if (!this.db) await this.readyPromise;
+    const [transactions, categories, accounts] = await Promise.all([
+      this.getAll(STORES.TRANSACTIONS),
+      this.getAll(STORES.CATEGORIES),
+      this.getAll(STORES.ACCOUNTS)
+    ]);
+
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+
+    const filtered = transactions.filter(tx => {
+      const txDate = TransactionModel.parseLocalDate(tx.date || tx.createdTimestamp);
+      return txDate.getFullYear() === year && txDate.getMonth() === month;
+    });
+
+    return this._buildReport(filtered, categories, accounts, {
+      year,
+      month,
+      monthName: monthNames[month]
+    });
+  }
+
+  // Custom Date-Range Report (inclusive startDate..endDate, YYYY-MM-DD)
+  async getRangeReport(startDate, endDate) {
+    if (!this.db) await this.readyPromise;
+    const [transactions, categories, accounts] = await Promise.all([
+      this.getAll(STORES.TRANSACTIONS),
+      this.getAll(STORES.CATEGORIES),
+      this.getAll(STORES.ACCOUNTS)
+    ]);
+
+    const startObj = startDate ? TransactionModel.parseLocalDate(startDate) : null;
+    const endObj = endDate ? TransactionModel.parseLocalDate(endDate) : null;
+
+    const filtered = transactions.filter(tx => {
+      const d = TransactionModel.parseLocalDate(tx.date || tx.createdTimestamp);
+      if (isNaN(d.getTime())) return false;
+      if (startObj && !isNaN(startObj.getTime()) && d < startObj) return false;
+      if (endObj && !isNaN(endObj.getTime()) && d > endObj) return false;
+      return true;
+    });
+
+    return this._buildReport(filtered, categories, accounts, {
+      startDate: startDate || '',
+      endDate: endDate || ''
+    });
   }
 
   async getAvailableReportPeriods() {
