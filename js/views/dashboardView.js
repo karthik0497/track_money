@@ -13,7 +13,6 @@ export class DashboardView {
     const isNegativeNet = metrics.netPosition < 0;
     const now = new Date();
     const currentMonthYear = now.toLocaleString('default', { month: 'long', year: 'numeric' });
-    const currentMonthName = now.toLocaleString('default', { month: 'long' });
 
     container.innerHTML = `
       <div class="dashboard-container fade-in">
@@ -207,67 +206,53 @@ export class DashboardView {
           </div>
         </div>
 
-        <!-- Spending by Category Chart & Accounts Mini View -->
-        <div class="grid-2-col" style="margin-top: 1.5rem;">
-          <!-- Category Spending Donut Chart -->
-          <div class="card chart-card">
-            <div class="card-header">
-              <h4>Spending by Category</h4>
-              <span class="text-xs text-muted">${currentMonthName}</span>
-            </div>
-            <div class="chart-container" id="category-chart-container">
-              ${this.renderCategoryChart(metrics.categorySpending)}
-            </div>
+        <!-- Account Balances Snapshot -->
+        <div class="card accounts-snapshot-card" style="margin-top: 1.5rem;">
+          <div class="card-header">
+            <h4>Account Balances</h4>
+            <button class="btn btn-text text-sm" id="view-all-accounts">View All →</button>
           </div>
-
-          <!-- Account Balances Snapshot -->
-          <div class="card accounts-snapshot-card">
-            <div class="card-header">
-              <h4>Account Balances</h4>
-              <button class="btn btn-text text-sm" id="view-all-accounts">View All →</button>
-            </div>
-            <div class="mini-accounts-list">
-              ${(metrics.debitAccounts.length === 0 && metrics.creditAccounts.length === 0) ? `
-                <div class="empty-placeholder" style="padding: 1.5rem 0.75rem; text-align: center;">
-                  <div style="font-size: 1.8rem; margin-bottom: 0.35rem;">🏦</div>
-                  <div class="font-bold text-xs" style="margin-bottom: 0.25rem;">No accounts created yet</div>
-                  <div class="text-xs text-muted" style="margin-bottom: 0.75rem;">Create an account to start tracking balances.</div>
-                  <button class="btn btn-primary btn-xs" id="dash-btn-add-account-empty">
-                    ➕ Create First Account
-                  </button>
+          <div class="mini-accounts-list">
+            ${(metrics.debitAccounts.length === 0 && metrics.creditAccounts.length === 0) ? `
+              <div class="empty-placeholder" style="padding: 1.5rem 0.75rem; text-align: center;">
+                <div style="font-size: 1.8rem; margin-bottom: 0.35rem;">🏦</div>
+                <div class="font-bold text-xs" style="margin-bottom: 0.25rem;">No accounts created yet</div>
+                <div class="text-xs text-muted" style="margin-bottom: 0.75rem;">Create an account to start tracking balances.</div>
+                <button class="btn btn-primary btn-xs" id="dash-btn-add-account-empty">
+                  ➕ Create First Account
+                </button>
+              </div>
+            ` : `
+              ${metrics.debitAccounts.slice(0, 3).map(acc => `
+                <div class="mini-account-row">
+                  <div class="acc-badge" style="background: ${acc.color}20; color: ${acc.color};">
+                    ${acc.icon || '🏦'}
+                  </div>
+                  <div class="acc-text">
+                    <div class="font-bold">${acc.name}</div>
+                    <div class="text-xs text-muted">${acc.type}</div>
+                  </div>
+                  <div class="acc-bal text-success font-bold">
+                    ${AccountModel.formatCurrency(acc.currentBalance)}
+                  </div>
                 </div>
-              ` : `
-                ${metrics.debitAccounts.slice(0, 3).map(acc => `
-                  <div class="mini-account-row">
-                    <div class="acc-badge" style="background: ${acc.color}20; color: ${acc.color};">
-                      ${acc.icon || '🏦'}
-                    </div>
-                    <div class="acc-text">
-                      <div class="font-bold">${acc.name}</div>
-                      <div class="text-xs text-muted">${acc.type}</div>
-                    </div>
-                    <div class="acc-bal text-success font-bold">
-                      ${AccountModel.formatCurrency(acc.currentBalance)}
-                    </div>
-                  </div>
-                `).join('')}
+              `).join('')}
 
-                ${metrics.creditAccounts.slice(0, 2).map(acc => `
-                  <div class="mini-account-row">
-                    <div class="acc-badge" style="background: ${acc.color}20; color: ${acc.color};">
-                      ${acc.icon || '💳'}
-                    </div>
-                    <div class="acc-text">
-                      <div class="font-bold">${acc.name}</div>
-                      <div class="text-xs text-muted">Outstanding</div>
-                    </div>
-                    <div class="acc-bal text-danger font-bold">
-                      ${AccountModel.formatCurrency(acc.currentOutstanding)}
-                    </div>
+              ${metrics.creditAccounts.slice(0, 2).map(acc => `
+                <div class="mini-account-row">
+                  <div class="acc-badge" style="background: ${acc.color}20; color: ${acc.color};">
+                    ${acc.icon || '💳'}
                   </div>
-                `).join('')}
-              `}
-            </div>
+                  <div class="acc-text">
+                    <div class="font-bold">${acc.name}</div>
+                    <div class="text-xs text-muted">Outstanding</div>
+                  </div>
+                  <div class="acc-bal text-danger font-bold">
+                    ${AccountModel.formatCurrency(acc.currentOutstanding)}
+                  </div>
+                </div>
+              `).join('')}
+            `}
           </div>
         </div>
 
@@ -317,78 +302,6 @@ export class DashboardView {
     `;
 
     this.attachEvents(container);
-  }
-
-  renderCategoryChart(categorySpending) {
-    const entries = Object.entries(categorySpending).sort((a, b) => b[1] - a[1]);
-    if (entries.length === 0) {
-      return `<div class="empty-placeholder text-muted">No expense categories yet</div>`;
-    }
-
-    const total = entries.reduce((sum, [, val]) => sum + val, 0);
-    const colors = [
-      '#14b8a6', '#3b82f6', '#ec4899', '#f59e0b', '#8b5cf6',
-      '#ef4444', '#84cc16', '#06b6d4', '#f97316', '#6366f1',
-      '#eab308', '#d946ef', '#10b981', '#0ea5e9', '#e11d48',
-      '#a855f7', '#22c55e', '#fb7185', '#2dd4bf', '#94a3b8'
-    ];
-
-    // Render interactive SVG donut chart + legend
-    let cumulativeAngle = 0;
-    const slices = entries.map(([cat, val], idx) => {
-      const percentage = (val / total) * 100;
-      const angle = (val / total) * 360;
-      const color = colors[idx % colors.length];
-
-      // Donut slice path
-      const startAngle = cumulativeAngle;
-      const endAngle = cumulativeAngle + angle;
-      cumulativeAngle = endAngle;
-
-      const x1 = 100 + 75 * Math.cos(Math.PI * (startAngle - 90) / 180);
-      const y1 = 100 + 75 * Math.sin(Math.PI * (startAngle - 90) / 180);
-      const x2 = 100 + 75 * Math.cos(Math.PI * (endAngle - 90) / 180);
-      const y2 = 100 + 75 * Math.sin(Math.PI * (endAngle - 90) / 180);
-
-      const largeArc = angle > 180 ? 1 : 0;
-      const pathD = entries.length === 1 
-        ? `M 100 25 A 75 75 0 1 1 99.99 25`
-        : `M ${x1} ${y1} A 75 75 0 ${largeArc} 1 ${x2} ${y2}`;
-
-      return {
-        pathD,
-        color,
-        cat,
-        val,
-        percentage: percentage.toFixed(1)
-      };
-    });
-
-    return `
-      <div class="donut-chart-layout">
-        <svg viewBox="0 0 200 200" class="donut-svg">
-          <circle cx="100" cy="100" r="75" fill="none" stroke="#1e293b" stroke-width="26" />
-          ${slices.map(s => `
-            <path d="${s.pathD}" fill="none" stroke="${s.color}" stroke-width="26" stroke-linecap="round" />
-          `).join('')}
-          <text x="100" y="95" text-anchor="middle" font-size="12" fill="#94a3b8">Total Spent</text>
-          <text x="100" y="118" text-anchor="middle" font-size="16" font-weight="bold" fill="#f8fafc">
-            ${AccountModel.formatCurrency(total)}
-          </text>
-        </svg>
-
-        <div class="chart-legend">
-          ${slices.slice(0, 5).map(s => `
-            <div class="legend-row">
-              <span class="legend-dot" style="background: ${s.color};"></span>
-              <span class="legend-label">${s.cat}</span>
-              <span class="legend-val font-bold">${AccountModel.formatCurrency(s.val)}</span>
-              <span class="legend-pct text-muted text-xs">(${s.percentage}%)</span>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    `;
   }
 
   attachEvents(container) {
